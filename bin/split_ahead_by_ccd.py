@@ -9,7 +9,7 @@ if __name__ == "__main__":
 
     import argparse
     import os
-    #from   coreutils.miscutils import fwsplit 
+    from   despymisc.miscutils import fwsplit 
     #from   despyutils import scamputil
 
     
