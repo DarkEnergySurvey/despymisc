@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-# $Id: miscutils.py 20574 2014-04-10 19:52:46Z mgower $
-# $Rev:: 20574                            $:  # Revision of last commit.
-# $LastChangedBy:: mgower                 $:  # Author of last commit.
-# $LastChangedDate:: 2014-04-10 14:52:46 #$:  # Date of last commit.
+# $Id$
+# $Rev::                                  $:  # Revision of last commit.
+# $LastChangedBy::                        $:  # Author of last commit.
+# $LastChangedDate::                      $:  # Date of last commit.
 
 import re
 import os
