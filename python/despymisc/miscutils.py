@@ -75,12 +75,13 @@ def coremakedirs(thedir):
 #######################################################################
 CU_PARSE_PATH = 4
 CU_PARSE_FILENAME = 2
-CU_PARSE_EXTENSION = 1
+CU_PARSE_EXTENSION = 1   # deprecating use CU_PARSE_COMPRESSION
+CU_PARSE_COMPRESSION = 1
 def parse_fullname(fullname, retmask = 2):
     fwdebug(3, 'FWUTILS_DEBUG', "fullname = %s" % fullname)
     fwdebug(3, 'FWUTILS_DEBUG', "retmask = %s" % retmask)
 
-    VALID_COMPRESS_EXT = ['fz']
+    VALID_COMPRESS_EXT = ['fz', 'gz']
 
     compress_ext = None
     filename = None
@@ -99,8 +100,8 @@ def parse_fullname(fullname, retmask = 2):
     filename = os.path.basename(fullname)
     fwdebug(3, 'FWUTILS_DEBUG', "filename = %s" % filename)
 
-    # check for compression extension on fits files
-    m = re.search(r'^(\S+.fits)\.([^.]+)$', filename)
+    # check for compression extension on files, assumes extension + compression extension
+    m = re.search(r'^(\S+\.\S+)\.([^.]+)$', filename)
     if m:
         fwdebug(3, 'FWUTILS_DEBUG', "m.group(2)=%s" % m.group(2))
         fwdebug(3, 'FWUTILS_DEBUG', "VALID_COMPRESS_EXT=%s" % VALID_COMPRESS_EXT)
@@ -108,8 +109,8 @@ def parse_fullname(fullname, retmask = 2):
             filename = m.group(1)
             compress_ext = '.'+m.group(2)
         else:
-            if retmask & CU_PARSE_EXTENSION:
-                print "Not valid compressions extension (%s)  Assuming non-compressed file." % m.group(2)
+            if retmask & CU_PARSE_COMPRESSION:
+                fwdebug(3, 'FWUTILS_DEBUG', "Not valid compressions extension (%s)  Assuming non-compressed file." % m.group(2))
             compress_ext = None
     else:
         fwdebug(3, 'FWUTILS_DEBUG', "Didn't match pattern for fits file with compress extension")
@@ -117,7 +118,7 @@ def parse_fullname(fullname, retmask = 2):
 
     if retmask & CU_PARSE_FILENAME:
         retval.append(filename)
-    if retmask & CU_PARSE_EXTENSION:
+    if retmask & CU_PARSE_COMPRESSION:
         retval.append(compress_ext)
 
     if len(retval) == 0:
