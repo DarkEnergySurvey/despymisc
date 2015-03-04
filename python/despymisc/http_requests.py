@@ -9,6 +9,8 @@ USAGE:
 - download file from address:
     http_requests.download_file('http://www.blabla.net/foo.xyz', 'blabla.xyz')
 
+- download DES file from address:
+    http_requests.download_file_des('http://www.blabla.net/foo.xyz', 'blabla.xyz')
 
 :author: michael h graber, michael.graber@fhnw.ch
 '''
@@ -35,12 +37,12 @@ def get_credentials(file,section='http-desarchive'):
 
     return USERNAME, PASSWORD, URL
 
-def download_file_des(url, filename):
+def download_file_des(url, filename, section='http-desarchive'):
 
     ''' Download files using the DES services files
     '''
     # Get the credentials
-    USERNAME, PASSWORD, URL = get_credentials(file=None,section='http-desarchive')
+    USERNAME, PASSWORD, URL = get_credentials(file=None,section=section)
     auth = (USERNAME, PASSWORD)
     req = Request(auth)
     req.download_file(url, filename)
