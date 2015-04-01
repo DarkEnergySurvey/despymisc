@@ -20,5 +20,6 @@ added to despymisc/python the following modules:
 - Fix the call to fwsplit inside split_ahead_by_ccd.py
 
 
-== Next version
+== 0.2.3
 - Moved subprocess_utils.py to multiprocess.utils.py 
+- minor changes to http_requests.py
