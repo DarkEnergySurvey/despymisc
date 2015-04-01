@@ -23,17 +23,20 @@ def get_credentials(file,section='http-desarchive'):
     """
     import the credentials via serviceaccess from the local .desservices file if possible
     """
+
     try:
         from despyserviceaccess import serviceaccess
         creds = serviceaccess.parse(file, section)
         USERNAME = creds['user']
         PASSWORD = creds['passwd']
-        URL = creds['url']
+        URL =      creds.get('url',None)
     except:
         USERNAME = None
         PASSWORD = None
-        URL = None 
-        print "WARNING: could not load credentials from .desservices.ini file -- make sure "
+        URL = None
+        warning = """WARNING: could not load credentials from .desservices.ini file for section %s
+        please make sure sections make sense""" % section
+        print warning
 
     return USERNAME, PASSWORD, URL
 
