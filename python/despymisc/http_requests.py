@@ -1,32 +1,32 @@
 '''
-Library module providing an easy-to-use API for http requests. 
+Library module providing an easy-to-use API for http requests to DESDM services.
 
-Loads credentials and WebAPI settings from a .desservices file in the users
-home directory. Needs therein a section called "filearchive".
+Loads credentials from a desfile storing credentials (.desservices.ini, by
+default assumed to be in the users home directory).
 
 USAGE:
 ``````
-- download file from address:
-    http_requests.download_file('http://www.blabla.net/foo.xyz', 'blabla.xyz')
-
 - download DES file from address:
     http_requests.download_file_des('http://www.blabla.net/foo.xyz', 'blabla.xyz')
 
 :author: michael h graber, michael.graber@fhnw.ch
 '''
 
+import os
 import urllib, urllib2
 from base64 import b64encode
 
-def get_credentials(file,section='http-desarchive'):
+def get_credentials(desfile=os.path.join(os.environ['HOME'], '.desservices.ini'),
+        section='http-desarchive'):
 
     """
-    import the credentials via serviceaccess from the local .desservices file if possible
+    Load the credentials using serviceaccess from a local .desservices file
+    if possible.
     """
 
     try:
         from despyserviceaccess import serviceaccess
-        creds = serviceaccess.parse(file, section)
+        creds = serviceaccess.parse(desfile, section)
         USERNAME = creds['user']
         PASSWORD = creds['passwd']
         URL =      creds.get('url',None)
@@ -40,12 +40,12 @@ def get_credentials(file,section='http-desarchive'):
 
     return USERNAME, PASSWORD, URL
 
-def download_file_des(url, filename, section='http-desarchive'):
+def download_file_des(url, filename, desfile=None, section='http-desarchive'):
 
-    ''' Download files using the DES services files
+    ''' Download files using the DES services files.
     '''
     # Get the credentials
-    USERNAME, PASSWORD, URL = get_credentials(file=None,section=section)
+    USERNAME, PASSWORD, URL = get_credentials(desfile=desfile, section=section)
     auth = (USERNAME, PASSWORD)
     req = Request(auth)
     req.download_file(url, filename)
