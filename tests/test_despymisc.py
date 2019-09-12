@@ -31,8 +31,9 @@ class TestXmlslurper(unittest.TestCase):
 <field name="Field4" datatype="int" arraysize="5"/>
 <field name="Field5" datatype="char" arraysize="2"/>
 <field name="field6" datatype="float" arraysize="2"/>
+<field name="field7" datatype="bool" arraysize="3"/>
 <TR>
- <TD>12345.6</TD><td>25</td><td>Blah</td><td>2 4 6 8 10</td><td>first second</td><td>2.5 6.7</td>
+ <TD>12345.6</TD><td>25</td><td>Blah</td><td>2 4 6 8 10</td><td>first second</td><td>2.5 6.7</td><td>1 0 1</td>
 </TR>
 <hi/>
 </TABLE>
@@ -47,6 +48,9 @@ class TestXmlslurper(unittest.TestCase):
             data = Xmlslurper('filename', self.tablelist)
             self.assertTrue('FGroups' in data.gettables().keys())
             self.assertTrue(len(data.gettables().keys()), 1)
+            self.assertEqual(len(data.keys()), 1)
+            tab = data.gettables()
+            self.assertEqual(tab['FGroups'][0]['field1'], 12345.6)
 
 if __name__ == '__main__':
     unittest.main()
