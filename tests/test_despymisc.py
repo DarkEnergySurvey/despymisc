@@ -24,21 +24,29 @@ class TestXmlslurper(unittest.TestCase):
                  "PSF_Extensions",
                  "PSF_Fields",
                  "Warnings")
-    xmldata = """<TABLE name="FGroups">
+    xmldata = """<main><TABLE name="FGroups">
 <FIELD name="Field1" datatype="float"/>
 <field name="Field2" datatype="int"/>
 <field name="Field3" datatype="str"/>
 <field name="Field4" datatype="int" arraysize="5"/>
 <field name="Field5" datatype="char" arraysize="2"/>
+<field name="field6" datatype="float" arraysize="2"/>
 <TR>
- <TD>12345.6</TD><td>25</td><td>Blah</td><td>2 4 6 8 10</td><td>first second</td>
+ <TD>12345.6</TD><td>25</td><td>Blah</td><td>2 4 6 8 10</td><td>first second</td><td>2.5 6.7</td>
 </TR>
+<hi/>
 </TABLE>
+<table name="bad_table">
+<field name="f1" datatype="int"/>
+<tr><td>5</td></tr>
+</table>
+</main>
 """
     def test_all(self):
         with patch('despymisc.xmlslurp.open', mock_open(read_data=self.xmldata)) as mo:
             data = Xmlslurper('filename', self.tablelist)
             self.assertTrue('FGroups' in data.gettables().keys())
+            self.assertTrue(len(data.gettables().keys()), 1)
             self.assertEqual(len(data['FGroups']), 1)
 
 
