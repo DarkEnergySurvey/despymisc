@@ -1,16 +1,35 @@
 #!/usr/bin/env python
-
+"""
+xmlslurper reads in an xml formatted file and converts it to a python dictionary
+"""
 import xml.parsers.expat
 
-class Xmlslurper:
+class Xmlslurper(object):
+    """
+    Class to read in an xml formatted file and convert the table contents to a python dictionary
 
+    takes the filename and the expected table names as inputs
+    """
     def __init__(self, filename, tablenames):
         self.data = {}
 
 
         ##################################################################
         def start_element(name, attrs, data=self.data):
-            if 'TABLE' == name.upper():
+            """ Overrides the xml parser start element routine, specifically looks
+                for table, field, tr, and td tags, ingoring all others
+
+                Parameters
+                ----------
+                name : str
+                    The name of the tag
+                attrs : dict
+                    Any tag attributes
+                data : dict
+                    The current data structure
+
+            """
+            if name.upper() == 'TABLE':
                 # skip if not one of the desired tables
                 if not attrs['name'] in self.data['wanted_tables']:
                     return
@@ -22,37 +41,46 @@ class Xmlslurper:
                 data['fieldarray'] = []
                 data['tables'][data['curtable']] = []
 
-            if 'FIELD' == name.upper() and self.data['curtable']:
+            if name.upper() == 'FIELD' and self.data['curtable']:
                 # save description information
                 data['fieldnames'].append(attrs['name'].lower())
                 data['fieldtypes'].append(attrs['datatype'])
                 data['fieldarray'].append(attrs.get('arraysize', None))
 
-            if 'TR' == name.upper():
+            if name.upper() == 'TR':
                 # new row, inialize row values
                 data['col'] = 0             # current column
                 data['prevcol'] = 0         # previous column
                 data['prevtext'] = ''       # previous text parsed in case partial due to buffer
                 data['currow'] = {}         # dictionary to store info from row
 
-            if 'TD' == name.upper():
+            if name.upper() == 'TD':
                 # save state that are in a TD section
                 data['in_TD'] = True
 
 
         ##################################################################
         def end_element(name, data=self.data):
+            """ Overrides the xml parser end element routine, specifically looks
+                for table, tr, and td tags, ingoring all others
 
-            if 'TD' == name.upper():
+                Parameters
+                ----------
+                name : str
+                    The name of the tag
+                data : dict
+                    The current data structure
+            """
+            if name.upper() == 'TD':
                 # if closed TD section, change TD state
                 data['col'] += 1
                 data['in_TD'] = False
 
-            if 'TR' == name.upper() and data['curtable']:
+            if name.upper() == 'TR' and data['curtable']:
                 # save current row dictionary to current table
                 data['tables'][data['curtable']].append(data['currow'])
 
-            if 'TABLE' == name.upper() and data['curtable']:
+            if name.upper() == 'TABLE' and data['curtable']:
                 # empty table variables
                 data['curtable'] = None
                 del self.data['fieldnames']
@@ -62,6 +90,17 @@ class Xmlslurper:
 
         ##################################################################
         def char_data(text, data=self.data):
+            """ Overrides the xml parser char_data routine. It converts the
+                contents of <td> tags into their expected data type and format
+
+                Parameters
+                ----------
+                test : str
+                    The contents of the current tag
+                data : dict
+                    The current data structure
+
+            """
             prevtext = text
 
             if data['in_TD'] and self.data['curtable']:
@@ -82,11 +121,11 @@ class Xmlslurper:
 
                     # convert values to right type
                     if curtype == 'int':
-                        for i in range(0, len(vals)):
-                            vals[i] = int(vals[i])
+                        for i, val in enumerate(vals):
+                            vals[i] = int(val)
                     elif curtype == 'float':
-                        for i in range(0, len(vals)):
-                            vals[i] = float(vals[i])
+                        for i, val in enumerate(vals):
+                            vals[i] = float(val)
 
                     # save data array to current row data
                     data['currow'][curname] = vals
@@ -132,9 +171,9 @@ class Xmlslurper:
         p.EndElementHandler = end_element
         p.CharacterDataHandler = char_data
 
-        f = open(filename, "r")
-        p.ParseFile(f)
-        f.close()
+        fl = open(filename, "r")
+        p.ParseFile(fl)
+        fl.close()
 
         #
         # clean out our bookkeeping
@@ -146,6 +185,13 @@ class Xmlslurper:
 
     ##################################################################
     def gettables(self):
+        """ Method to get the full contents of the data table structure
+
+            Returns
+            -------
+            Dict containing the current table data
+
+        """
         return self.data['tables']
 
     #
@@ -170,8 +216,8 @@ if __name__ == "__main__":  # pragma no coverage
     import pprint
     pp = pprint.PrettyPrinter(indent=4)
     if len(sys.argv) > 1:
-        pp.pprint(Xmlslurper(sys.argv[1],tablelist).gettables())
+        pp.pprint(Xmlslurper(sys.argv[1], tablelist).gettables())
     else:
         for f in glob.glob('*.xml'):
             print "f: ", f
-            pp.pprint(Xmlslurper(f,tablelist).gettables())
+            pp.pprint(Xmlslurper(f, tablelist).gettables())
