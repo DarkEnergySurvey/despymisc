@@ -47,9 +47,6 @@ class TestXmlslurper(unittest.TestCase):
             data = Xmlslurper('filename', self.tablelist)
             self.assertTrue('FGroups' in data.gettables().keys())
             self.assertTrue(len(data.gettables().keys()), 1)
-            self.assertEqual(len(data['FGroups']), 1)
-
-
 
 if __name__ == '__main__':
     unittest.main()
