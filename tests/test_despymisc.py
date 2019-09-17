@@ -2,9 +2,13 @@
 import unittest
 from contextlib import contextmanager
 import sys
+import time
+import errno
+
 from StringIO import StringIO
-from mock import patch, mock_open, MagicMock
+from mock import patch, mock_open
 from despymisc.xmlslurp import Xmlslurper
+import despymisc.subprocess4 as sub4
 
 @contextmanager
 def capture_output():
@@ -51,6 +55,36 @@ class TestXmlslurper(unittest.TestCase):
             self.assertEqual(len(data.keys()), 1)
             tab = data.gettables()
             self.assertEqual(tab['FGroups'][0]['field1'], 12345.6)
+
+class TestSubprocess4(unittest.TestCase):
+    class TestError(OSError):
+        def __init__(self, text=''):
+            OSError.__init__(self, text)
+            self.errno = errno.ECHILD
+
+    def test_init(self):
+        _ = sub4.Popen(['ls','-1'])
+
+    def test_wait(self):
+        start = time.time()
+        po = sub4.Popen(['sleep', '10'])
+        po.wait4()
+        self.assertTrue(time.time() - start >= 10.)
+
+    def test_waitError(self):
+        with patch('despymisc.subprocess4.os.wait4', side_effect=self.TestError()):
+            start = time.time()
+            po = sub4.Popen(['sleep', '10'])
+            po.wait4()
+            self.assertTrue(time.time() - start < 10.)
+
+        with patch('despymisc.subprocess4.os.wait4', side_effect=OSError()):
+            with self.assertRaises(OSError):
+                po = sub4.Popen(['sleep', '10'])
+                po.wait4()
+
+
+
 
 if __name__ == '__main__':
     unittest.main()
