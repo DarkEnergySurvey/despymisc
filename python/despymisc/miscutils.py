@@ -268,10 +268,8 @@ def pretty_print_dict(the_dict, out_file=None, sortit=False, indent=4):
        the same sub-dictionary could be output in alphabetical order"""
     if out_file is None:
         out_file = sys.stdout
-    if the_dict is None:
-        assert "Passed in None for dictionary arg"
-    if not isinstance(the_dict, dict):
-        assert "Passed in non-dictionary object for dictionary arg"
+    assert the_dict is not None, "Passed in None for dictionary arg"
+    assert isinstance(the_dict, dict), "Passed in non-dictionary object for dictionary arg"
     _recurs_pretty_print_dict(the_dict, out_file, sortit, indent, 0)
 
 
