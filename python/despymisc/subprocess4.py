@@ -49,7 +49,7 @@ class Popen(subprocess.Popen):
                 self._handle_exitstatus(sts)
             else:
                 try:
-                    p = psutil.Process(self.pid)
+                    _ = psutil.Process(self.pid)
                 except psutil.NoSuchProcess:
                     print 'Process finished but wait4() returned a mismatched pid'
                     self.returncode = 1
