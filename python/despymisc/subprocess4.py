@@ -14,6 +14,7 @@ import subprocess
 import os
 import errno
 import signal
+import psutil
 
 class Popen(subprocess.Popen):
     """
@@ -46,7 +47,13 @@ class Popen(subprocess.Popen):
             # 0 even without WNOHANG in odd situations.  issue14396.
             if pid == self.pid:
                 self._handle_exitstatus(sts)
-            if self.returncode == -signal.SIGSEGV:
-                print "SEGMENTATION FAULT"
+            else:
+                try:
+                    p = psutil.Process(self.pid)
+                except psutil.NoSuchProcess:
+                    print 'Process finished but wait4() returned a mismatched pid'
+                    self.returncode = 1
 
-            return self.returncode
+        if self.returncode == -signal.SIGSEGV:
+            print "SEGMENTATION FAULT"
+        return self.returncode
