@@ -16,6 +16,8 @@ import despymisc.scamputil as scu
 import despymisc.misctime as mt
 import despymisc.create_special_metadata as csm
 import despymisc.http_requests as hrq
+import despymisc.miscutils as mut
+
 
 @contextmanager
 def capture_output():
@@ -2415,6 +2417,130 @@ URL     =   data.somewhere.net
             self.assertTrue('return data' in f.readline())
             os.unlink(output)
             os.unlink('temp.ini')
+
+class TestMiscutils(unittest.TestCase):
+    class TestError(OSError):
+        def __init__(self, text=''):
+            OSError.__init__(self, text)
+            self.errno = errno.EEXIST
+
+    class TestObj(object):
+        def __init__(self, val):
+            self.use_db = val
+
+    def setUp(self):
+        self.tch = 'TEST_CHECK_LVL'
+
+    def test_fwdebug(self):
+        msg = 'My message'
+        pre = 'prfx'
+        os.environ[self.tch] = '4'
+        with capture_output() as (out, err):
+            mut.fwdebug(5, self.tch, msg, pre)
+            output = out.getvalue().strip()
+            self.assertFalse(output)
+
+        os.environ[self.tch] = '5'
+        with capture_output() as (out, err):
+            mut.fwdebug(5, self.tch, msg, pre)
+            output = out.getvalue().strip()
+            self.assertTrue(msg in output)
+            self.assertTrue(pre in output)
+
+    def test_fwdebug_check(self):
+        os.environ[self.tch] = '0'
+        self.assertFalse(mut.fwdebug_check(5, self.tch))
+        self.assertFalse(mut.fwdebug_check(3, 'UNKNOWN'))
+        os.environ['TEST_DEBUG'] = '8'
+        del os.environ[self.tch]
+        self.assertTrue(mut.fwdebug_check(5, self.tch))
+        os.environ['self.tch'] = '5'
+        self.assertTrue(mut.fwdebug_check(5, self.tch))
+        os.environ['DESDM_DEBUG'] = '2'
+        self.assertFalse(mut.fwdebug_check(5, self.tch))
+        self.assertFalse(mut.fwdebug_check(3, 'UNKNOWN_'))
+        os.environ['DESDM_DEBUG'] = '10'
+        self.assertTrue(mut.fwdebug_check(5, self.tch))
+
+    def test_fwdebug_print(self):
+        msg = 'My message'
+        pre = 'prfx'
+        with capture_output() as (out, err):
+            mut.fwdebug_print(msg, pre)
+            output = out.getvalue().strip()
+            self.assertTrue(msg in output)
+            self.assertTrue(pre in output)
+
+    def test_fwdie(self):
+        msg = 'My message'
+        with capture_output() as (out, err):
+            with self.assertRaises(SystemExit) as cm:
+                mut.fwdie(msg, 95, 2)
+            self.assertEqual(cm.exception.code, 95)
+            output = out.getvalue().strip()
+            self.assertTrue(msg in output)
+
+    def test_fwsplit(self):
+        inp = '[1, 3, 5, 7, 9]'
+        self.assertEqual(mut.fwsplit(inp), ['1', '3', '5', '7', '9'])
+        inp = '[a|b|c  |d]'
+        self.assertEqual(mut.fwsplit(inp, '|'), ['a', 'b', 'c', 'd'])
+        inp = '3:5'
+        self.assertEqual(mut.fwsplit(inp), ['3', '4', '5'])
+        inp = '1,3:5,9'
+        self.assertEqual(mut.fwsplit(inp), ['1', '3', '4', '5', '9'])
+
+    def test_coremakedirs(self):
+        mut.coremakedirs(None)
+        mut.coremakedirs('.')
+        with patch('despymisc.miscutils.os.makedirs') as md:
+            mut.coremakedirs('here')
+        with patch('despymisc.miscutils.os.makedirs', side_effect=OSError()) as md:
+            with self.assertRaises(OSError):
+                mut.coremakedirs('here2')
+        with patch('despymisc.miscutils.os.makedirs', side_effect=self.TestError()) as md:
+            mut.coremakedirs('here2')
+
+    #def test_parse_fullname(self):
+
+    def test_convertBool(self):
+        self.assertTrue(mut.convertBool('True'))
+        self.assertTrue(mut.convertBool(1))
+        self.assertTrue(mut.convertBool('1'))
+        self.assertTrue(mut.convertBool('y'))
+        self.assertTrue(mut.convertBool(True))
+        with self.assertRaises(Exception):
+            mut.convertBool(2.5)
+
+        self.assertFalse(mut.convertBool('False'))
+        self.assertFalse(mut.convertBool(0))
+        self.assertFalse(mut.convertBool('0'))
+        self.assertFalse(mut.convertBool('n'))
+        self.assertFalse(mut.convertBool(False))
+        self.assertFalse(mut.convertBool(None))
+
+    def test_use_db(self):
+        self.assertTrue(mut.use_db('y'))
+        self.assertTrue(mut.use_db({'use_db': '1', 'other': False}))
+        self.assertTrue(mut.use_db({'other': True}))
+        self.assertTrue(mut.use_db(self.TestObj(True)))
+        self.assertFalse(mut.use_db(self.TestObj(0)))
+        self.assertTrue(mut.use_db(None))
+        os.environ['DESDM_USE_DB'] = '1'
+        self.assertTrue(mut.use_db(None))
+        os.environ['DESDM_USE_DB'] = '0'
+        self.assertFalse(mut.use_db(None))
+
+#def test_checkTrue(self):
+#def test_pretty_print_dict(self):
+#def test__recurs_pretty_print_dict(self):
+#def test_get_config_vals(self):
+#def test_dynamically_load_class(self):
+#def test_updateOrderedDict(self):
+#def test_get_list_directories(self):
+#def test_elapsed_time(self):
+#def test_query2dict_of_lists(self):
+#def test_create_logger(self):
 
 
 
