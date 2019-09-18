@@ -2350,6 +2350,11 @@ URL     =   data.somewhere.net
             req.get_read(url)
             self.assertTrue(req.error_status[0])
 
+        with patch('despymisc.http_requests.urllib2.urlopen', side_effect=Exception("Bad call")) as ptch:
+            req = hrq.Request([])
+            req.get_read(url)
+            self.assertTrue(req.error_status[0])
+
         with patch('despymisc.http_requests.urllib2.urlopen') as pop:
             req = hrq.Request(['uname', 'pwd'])
             resp = req.get_read(url)
@@ -2384,6 +2389,33 @@ URL     =   data.somewhere.net
             req.GET(url, {'request':'hello'})
             self.assertFalse(req.error_status[0])
             self.assertEqual(req.response, 'rval')
+
+    @patch('despymisc.http_requests.urllib2.Request')
+    def test_Request_download_file(self, prq):
+        url = 'data.somewhere.net'
+        text = """
+;
+;  initial comments in file
+;comment line with comment marker not in column 1 not allowed
+;
+
+[http-arch]
+USER    =   maximal_user
+PASSWD  =   maximal_passwd
+URL     =   data.somewhere.net
+"""
+        f = open('temp.ini', 'w')
+        f.write(text)
+        f.close()
+
+        output = 'test.output'
+        with patch('despymisc.http_requests.urllib2.urlopen', mock_open(read_data='return data')) as mo:
+            hrq.download_file_des(url, output, 'temp.ini', 'http-arch')
+            f = open(output, 'r')
+            self.assertTrue('return data' in f.readline())
+            os.unlink(output)
+            os.unlink('temp.ini')
+
 
 
 if __name__ == '__main__':
