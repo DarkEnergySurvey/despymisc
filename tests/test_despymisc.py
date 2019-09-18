@@ -4,6 +4,8 @@ from contextlib import contextmanager
 import sys
 import time
 import errno
+import signal
+import psutil
 
 from StringIO import StringIO
 from mock import patch, mock_open
@@ -75,16 +77,35 @@ class TestSubprocess4(unittest.TestCase):
         with patch('despymisc.subprocess4.os.wait4', side_effect=self.TestError()):
             start = time.time()
             po = sub4.Popen(['sleep', '10'])
-            po.wait4()
+            self.assertTrue(po.wait4() == 0)
             self.assertTrue(time.time() - start < 10.)
-
         with patch('despymisc.subprocess4.os.wait4', side_effect=OSError()):
             with self.assertRaises(OSError):
                 po = sub4.Popen(['sleep', '10'])
                 po.wait4()
 
+    def test_fastReturn(self):
+        po = sub4.Popen(['ls','-1'])
+        time.sleep(3)
+        po.returncode = 0
+        self.assertIsNotNone(po.returncode)
+        self.assertIsNotNone(po.wait4())
 
+    def test_segfault(self):
+        with capture_output() as (out, err):
+            po = sub4.Popen(['ls','-1'])
+            po.returncode = -signal.SIGSEGV
+            self.assertTrue(-signal.SIGSEGV == po.wait4())
+            output = out.getvalue().strip()
+            self.assertTrue('SEGMENTATION' in output)
 
+    def test_mismatchPID(self):
+        with patch('despymisc.subprocess4.os.wait4', return_value=(0,1,{})) as osw:
+            po = sub4.Popen(['ls'])
+            pu = psutil.Process(po.pid)
+            pu.terminate()
+            pu.wait()
+            self.assertEqual(po.wait4(), 1)
 
 if __name__ == '__main__':
     unittest.main()
