@@ -2237,16 +2237,16 @@ class Test_create_special_metadata(unittest.TestCase):
         self.assertEqual(csm.fwhm_arcsec(args), 0.5)
 
         args = [0.5, 1, 1, 1, 1, 1, 0]
-        self.assertEqual(csm.fwhm_arcsec(args), .25)
+        self.assertEqual(csm.fwhm_arcsec(args), 0.25)
 
         args = [0.5, 1, 1, 1, 1, 0.5, 1]
-        self.assertEqual(csm.fwhm_arcsec(args), .375)
+        self.assertEqual(csm.fwhm_arcsec(args), 0.375)
 
         args = [0.5, 0, 2, 1, 1, 1, 0]
-        self.assertEqual(csm.fwhm_arcsec(args), .25)
+        self.assertEqual(csm.fwhm_arcsec(args), 0.25)
 
         args = [0.5, 0, 0, 1, 1, 1, 0]
-        self.assertEqual(csm.fwhm_arcsec(args), .25)
+        self.assertEqual(csm.fwhm_arcsec(args), 0.25)
 
         args = [0.5, 0, 0, 1, 1, 0, 0]
         with self.assertRaises(KeyError):
@@ -2262,16 +2262,19 @@ class Test_create_special_metadata(unittest.TestCase):
             csm.fwhm_arcsec([])
 
         args = [0.5, 3, 1, -1, -1, 1, 0]
-        self.assertEqual(csm.fwhm_arcsec(args), .25)
+        self.assertEqual(csm.fwhm_arcsec(args), 0.25)
 
         args = [0.5, 3, 1, -1, 0, 1, 0]
-        self.assertEqual(csm.fwhm_arcsec(args), .25)
+        self.assertEqual(csm.fwhm_arcsec(args), 0.25)
 
         args = [0.5, 3, 1, 0, 0, 1, 0]
-        self.assertEqual(csm.fwhm_arcsec(args), .25)
+        self.assertEqual(csm.fwhm_arcsec(args), 0.25)
 
         args = [2000, 0.5, 1, 1, 1, 10000, 100]
         self.assertAlmostEqual(csm.fwhm_arcsec(args), 9235342.9410, 4)
+
+        args = [0.5, 1, 0, 0, 1, 1, 1]
+        self.assertEqual(csm.fwhm_arcsec(args), 0.5)
 
 if __name__ == '__main__':
     unittest.main()
