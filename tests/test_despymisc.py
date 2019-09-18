@@ -14,6 +14,7 @@ from despymisc.xmlslurp import Xmlslurper
 import despymisc.subprocess4 as sub4
 import despymisc.scamputil as scu
 import despymisc.misctime as mt
+import despymisc.create_special_metadata as csm
 
 @contextmanager
 def capture_output():
@@ -2188,6 +2189,75 @@ class TestMisctime(unittest.TestCase):
         self.assertEqual('20190914', mt.convert_utc_str_to_nite(datestr))
         datestr = '2019-09-15T15:00:01.00'
         self.assertEqual('20190915', mt.convert_utc_str_to_nite(datestr))
+
+class Test_create_special_metadata(unittest.TestCase):
+    def test_band(self):
+        self.assertEqual(csm.create_band('u 3'), 'u')
+        with self.assertRaises(KeyError):
+            csm.create_band('Z')
+        self.assertEqual(csm.create_band('z'), 'z')
+
+    def test_create_camsym(self):
+        self.assertEqual(csm.create_camsym('g asdf23'), 'g')
+
+    def test_create_nite(self):
+        datestr = '2019-09-15T10:35:22'
+        self.assertEqual('20190914', csm.create_nite(datestr))
+        datestr = '2019-09-15T14:59:59.99'
+        self.assertEqual('20190914', csm.create_nite(datestr))
+        datestr = '2019-09-15T15:00:01.00'
+        self.assertEqual('20190915', csm.create_nite(datestr))
+        datestr = '2019-09-01T01:00:01.00'
+        self.assertEqual('20190831', csm.create_nite(datestr))
+        datestr = '2019-01-01T01:00:01.00'
+        self.assertEqual('20181231', csm.create_nite(datestr))
+
+    def test_create_field(self):
+        fld = '12,34,56'
+        obj = " hex " + fld
+        self.assertEqual(csm.create_field(obj), fld)
+        with self.assertRaises(KeyError):
+            csm.create_field('hex ' + fld)
+        with self.assertRaises(KeyError):
+            csm.create_field(' hex  ' + fld)
+
+    def test_convert_ra_to_deg(self):
+        self.assertEqual(csm.convert_ra_to_deg('06:00:00'), 90.0)
+        self.assertEqual(csm.convert_ra_to_deg('12:00:01'), round(180.0 + 15./3600., 6))
+
+    def test_convert_dec_to_deg(self):
+        self.assertEqual(csm.convert_dec_to_deg('27:30:00'), 27.5)
+        self.assertEqual(csm.convert_dec_to_deg('-27:30:00'), -27.5)
+
+    def test_fwhm_arcsec(self):
+        args = [0.5, 1, 1, 1, 1, 1, 1]
+        self.assertEqual(csm.fwhm_arcsec(args), 0.5)
+
+        args = [0.5, 2, 1, 1, 1, 1, 1]
+        self.assertEqual(csm.fwhm_arcsec(args), 0.5)
+
+        args = [0.5, 1, 1, 1, 1, 1, 0]
+        self.assertEqual(csm.fwhm_arcsec(args), .25)
+
+        args = [0.5, 1, 1, 1, 1, 0.5, 1]
+        self.assertEqual(csm.fwhm_arcsec(args), .375)
+
+        args = [0.5, 0, 2, 1, 1, 1, 0]
+        self.assertEqual(csm.fwhm_arcsec(args), .25)
+
+        args = [0.5, 0, 0, 1, 1, 1, 0]
+        self.assertEqual(csm.fwhm_arcsec(args), .25)
+
+        args = [0.5, 0, 0, 1, 1, 0, 0]
+        with self.assertRaises(KeyError):
+            csm.fwhm_arcsec(args)
+
+        args = [0.5, -1, 2, 1, 1, 0, 0]
+        self.assertAlmostEqual(csm.fwhm_arcsec(args), 3078.4476, 4)
+
+        args = [0.5, -1, -2, 1, 1, 0, 0]
+        self.assertAlmostEqual(csm.fwhm_arcsec(args), 3078.4476, 4)
+
 
 if __name__ == '__main__':
     unittest.main()
