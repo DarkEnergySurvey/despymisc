@@ -48,7 +48,7 @@ def split_ahead_by_ccd(infile, outfile, ccd_list):
             tmp_lines.append(line)
         if keywd[0] == "END":
             if not ccdnum_found:
-                tmp_dict["ccd"] = int(icnt+1)
+                tmp_dict["ccd"] = int(icnt + 1)
             head_set[tmp_dict["ccd"]] = tmp_lines
             tmp_lines = []
             tmp_dict = {}
