@@ -2451,6 +2451,7 @@ class TestMiscutils(unittest.TestCase):
         os.environ[self.tch] = '0'
         self.assertFalse(mut.fwdebug_check(5, self.tch))
         self.assertFalse(mut.fwdebug_check(3, 'UNKNOWN'))
+        self.assertFalse(mut.fwdebug_check(3, 'UNKNOWN_X'))
         os.environ['TEST_DEBUG'] = '8'
         del os.environ[self.tch]
         self.assertTrue(mut.fwdebug_check(5, self.tch))
@@ -2458,7 +2459,6 @@ class TestMiscutils(unittest.TestCase):
         self.assertTrue(mut.fwdebug_check(5, self.tch))
         os.environ['DESDM_DEBUG'] = '2'
         self.assertFalse(mut.fwdebug_check(5, self.tch))
-        self.assertFalse(mut.fwdebug_check(3, 'UNKNOWN_'))
         os.environ['DESDM_DEBUG'] = '10'
         self.assertTrue(mut.fwdebug_check(5, self.tch))
 
@@ -2518,6 +2518,7 @@ class TestMiscutils(unittest.TestCase):
         self.assertFalse(mut.convertBool('n'))
         self.assertFalse(mut.convertBool(False))
         self.assertFalse(mut.convertBool(None))
+        self.assertFalse(mut.convertBool('q'))
 
     def test_use_db(self):
         self.assertTrue(mut.use_db('y'))
@@ -2531,10 +2532,58 @@ class TestMiscutils(unittest.TestCase):
         os.environ['DESDM_USE_DB'] = '0'
         self.assertFalse(mut.use_db(None))
 
-#def test_checkTrue(self):
-#def test_pretty_print_dict(self):
-#def test__recurs_pretty_print_dict(self):
-#def test_get_config_vals(self):
+    def test_checkTrue(self):
+        self.assertTrue(mut.checkTrue('go', {'go': 1}))
+        self.assertTrue(mut.checkTrue('go', {'gogo': 1}))
+        self.assertFalse(mut.checkTrue('go', {'gogo': 1}, False))
+        self.assertTrue(mut.checkTrue('use_db', self.TestObj(True)))
+        self.assertTrue(mut.checkTrue('', True))
+        self.assertFalse(mut.checkTrue('', 0))
+        self.assertTrue(mut.checkTrue('', None))
+        os.environ['DESDM_QQ'] = '1'
+        self.assertTrue(mut.checkTrue('QQ', None))
+        os.environ['DESDM_QQ'] = '0'
+        self.assertFalse(mut.checkTrue('QQ', None))
+
+    def test_pretty_print_dict(self):
+        with self.assertRaises(AssertionError):
+            mut.pretty_print_dict(None, out_file='my.out')
+        with self.assertRaises(AssertionError):
+            mut.pretty_print_dict([])
+        #with capture_output() as (out, err):
+        data = {'item1': [1,3,5],
+                'item2': 'abc',
+                'item3': {'item4': True, 'item5': 7}}
+        with capture_output() as (out, err):
+            mut.pretty_print_dict(data, indent=4)
+            output = out.getvalue().strip()
+            self.assertTrue(output.startswith('item'))
+            self.assertTrue('item2 = abc' in output)
+            self.assertTrue('    item4 = True' in output)
+
+        with capture_output() as (out, err):
+            mut.pretty_print_dict(data, sortit=True, indent=4)
+            output = out.getvalue().strip()
+            self.assertTrue(output.startswith('item1'))
+            self.assertTrue('item2 = abc' in output)
+            self.assertTrue('    item4 = True' in output)
+
+    def test_get_config_vals(self):
+        extra = {'item1': 5,
+                 'item2': 'hello'}
+        config = {'item3': True,
+                  'item4': [1,2,3]}
+        info = mut.get_config_vals(extra, config, {'item1': 'REQ', 'item5': 'OPT'})
+        self.assertEqual(len(info.keys()), 1)
+        self.assertTrue(info['item1'] == extra['item1'])
+        with self.assertRaises(SystemExit):
+            mut.get_config_vals(extra, config, {'item1': 'REQ', 'item5': 'REQ'})
+        info = mut.get_config_vals(None, None, {'item1': 'OPT', 'item5': 'OPT'})
+        self.assertEqual(len(info.keys()), 0)
+        info = mut.get_config_vals(extra, config, {'item3': 'req', 'item9': 'opt'})
+        self.assertEqual(len(info.keys()), 1)
+        self.assertTrue(info['item3'])
+
 #def test_dynamically_load_class(self):
 #def test_updateOrderedDict(self):
 #def test_get_list_directories(self):
