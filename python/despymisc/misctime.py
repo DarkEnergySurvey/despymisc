@@ -23,14 +23,14 @@ def convert_utc_str_to_nite(datestr):
     # Hardcode time zone
     from_zone = tz.gettz('UTC')
     to_zone = tz.gettz('America/Santiago')
-    
+
     # convert date string to datetime object
-    utc  = parse(datestr)
+    utc = parse(datestr)
     utc = utc.replace(tzinfo=from_zone)
 
     # Convert time zone to local on mountain
     local_dt = utc.astimezone(to_zone)
-    noon_dt  = local_dt.replace(hour=12, minute=0, second=0, microsecond=0)
+    noon_dt = local_dt.replace(hour=12, minute=0, second=0, microsecond=0)
     if local_dt < noon_dt:  # if before noon, observing nite has previous date
         obsdate = (local_dt - datetime.timedelta(days=1)).date()
     else:
@@ -39,6 +39,3 @@ def convert_utc_str_to_nite(datestr):
     # Get the nite only -- not the time
     nite = obsdate.strftime('%Y%m%d')
     return nite
-
-if __name__ == '__main__':
-    pass
