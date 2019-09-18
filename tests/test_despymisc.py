@@ -2258,6 +2258,20 @@ class Test_create_special_metadata(unittest.TestCase):
         args = [0.5, -1, -2, 1, 1, 0, 0]
         self.assertAlmostEqual(csm.fwhm_arcsec(args), 3078.4476, 4)
 
+        with self.assertRaises(TypeError):
+            csm.fwhm_arcsec([])
+
+        args = [0.5, 3, 1, -1, -1, 1, 0]
+        self.assertEqual(csm.fwhm_arcsec(args), .25)
+
+        args = [0.5, 3, 1, -1, 0, 1, 0]
+        self.assertEqual(csm.fwhm_arcsec(args), .25)
+
+        args = [0.5, 3, 1, 0, 0, 1, 0]
+        self.assertEqual(csm.fwhm_arcsec(args), .25)
+
+        args = [2000, 0.5, 1, 1, 1, 10000, 100]
+        self.assertAlmostEqual(csm.fwhm_arcsec(args), 9235342.9410, 4)
 
 if __name__ == '__main__':
     unittest.main()
