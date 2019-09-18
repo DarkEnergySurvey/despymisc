@@ -2168,5 +2168,16 @@ END
         with self.assertRaises(Exception) as ra:
             scu.split_ahead_by_ccd('', '', [])
 
+    def test_malformed_file(self):
+        f = open('malformed.ahead', 'w')
+        f.write("END\n")
+        f.close()
+        output = 'test.junk'
+        self.assertTrue(scu.split_ahead_by_ccd('malformed.ahead', output, []))
+        self.assertTrue(os.path.exists(output))
+        self.assertEqual(os.stat(output).st_size, 0)
+        os.unlink(output)
+        os.unlink('malformed.ahead')
+
 if __name__ == '__main__':
     unittest.main()
