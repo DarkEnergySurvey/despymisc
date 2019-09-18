@@ -15,6 +15,7 @@ import despymisc.subprocess4 as sub4
 import despymisc.scamputil as scu
 import despymisc.misctime as mt
 import despymisc.create_special_metadata as csm
+import despymisc.http_requests as hrq
 
 @contextmanager
 def capture_output():
@@ -2275,6 +2276,115 @@ class Test_create_special_metadata(unittest.TestCase):
 
         args = [0.5, 1, 0, 0, 1, 1, 1]
         self.assertEqual(csm.fwhm_arcsec(args), 0.5)
+
+class TestHttpRequest(unittest.TestCase):
+    def test_get_credentials(self):
+        with capture_output() as (out, err):
+            unm, pas, url = hrq.get_credentials()
+            self.assertIsNone(unm)
+            self.assertIsNone(pas)
+            self.assertIsNone(url)
+            output = out.getvalue().strip()
+            self.assertTrue('could not load' in output)
+
+        text = """
+;
+;  initial comments in file
+;comment line with comment marker not in column 1 not allowed
+;
+
+[http-arch]
+USER    =   maximal_user
+PASSWD  =   maximal_passwd
+URL     =   data.somewhere.net
+"""
+        f = open('temp.ini', 'w')
+        f.write(text)
+        f.close()
+        unm, pas, url = hrq.get_credentials('temp.ini', 'http-arch')
+        self.assertEqual(unm, 'maximal_user')
+        self.assertEqual(pas, 'maximal_passwd')
+        self.assertEqual(url, 'data.somewhere.net')
+        os.unlink('temp.ini')
+
+
+    def test_Request_init(self):
+        auth = ('X', 'Y')
+        req = hrq.Request(auth)
+        self.assertEqual(auth, req.auth)
+
+    @patch('despymisc.http_requests.urllib2.Request')
+    def test_Request_POST(self, prq):
+        data = 'hello=5'
+        url = 'data.somewhere.net'
+        with self.assertRaises(ValueError):
+            req = hrq.Request([])
+            req.POST(None, data)
+
+        with self.assertRaises(ValueError):
+            req = hrq.Request([])
+            req.POST(None, {})
+
+        with patch('despymisc.http_requests.urllib2.urlopen', side_effect=Exception("Bad call")) as ptch:
+            req = hrq.Request([])
+            req.POST(url, {})
+            self.assertTrue(req.error_status[0])
+            self.assertTrue('Bad call' in req.error_status[1])
+
+        with patch('despymisc.http_requests.urllib2.urlopen', return_value='rval') as ptch:
+            req = hrq.Request(['uname', 'pwd'])
+            req.POST(url, {'request':'hello'})
+            self.assertFalse(req.error_status[0])
+            self.assertEqual(req.response, 'rval')
+
+    @patch('despymisc.http_requests.urllib2.Request')
+    def test_Request_get_read(self, prq):
+        url = 'data.somewhere.net'
+
+        with self.assertRaises(ValueError):
+            req = hrq.Request(['uname', 'pwd'])
+            req.get_read(None)
+
+        with patch('despymisc.http_requests.urllib2.urlopen', side_effect=Exception("Bad call")) as ptch:
+            req = hrq.Request(['uname', 'pwd'])
+            req.get_read(url)
+            self.assertTrue(req.error_status[0])
+
+        with patch('despymisc.http_requests.urllib2.urlopen') as pop:
+            req = hrq.Request(['uname', 'pwd'])
+            resp = req.get_read(url)
+            self.assertFalse(req.error_status[0])
+            self.assertTrue('urlopen().read()' in str(resp))
+
+    @patch('despymisc.http_requests.urllib2.Request')
+    def test_Request_download_file(self, prq):
+        output = 'test.output'
+        with patch('despymisc.http_requests.urllib2.urlopen', mock_open(read_data='return data')) as mo:
+            req = hrq.Request(['uname', 'pwd'])
+            req.download_file('data.somewhere.net', output)
+            f = open(output, 'r')
+            self.assertTrue('return data' in f.readline())
+            os.unlink(output)
+
+    @patch('despymisc.http_requests.urllib2.Request')
+    def test_Request_GET(self, prq):
+        url = 'data.somewhere.net'
+        with self.assertRaises(ValueError):
+            req = hrq.Request(['uname', 'pwd'])
+            req.GET(None)
+
+        with patch('despymisc.http_requests.urllib2.urlopen', side_effect=Exception("Bad call")) as ptch:
+            req = hrq.Request([])
+            req.GET(url, {'item1':2, 'item2':'val2'})
+            self.assertTrue(req.error_status[0])
+            self.assertTrue('Bad call' in req.error_status[1])
+
+        with patch('despymisc.http_requests.urllib2.urlopen', return_value='rval') as ptch:
+            req = hrq.Request(['uname', 'pwd'])
+            req.GET(url, {'request':'hello'})
+            self.assertFalse(req.error_status[0])
+            self.assertEqual(req.response, 'rval')
+
 
 if __name__ == '__main__':
     unittest.main()
