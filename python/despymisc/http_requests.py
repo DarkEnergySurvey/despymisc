@@ -31,7 +31,7 @@ def get_credentials(desfile=os.path.join(os.environ['HOME'], '.desservices.ini')
         username = creds['user']
         password = creds['passwd']
         url = creds.get('url', None)
-    except:
+    except Exception:
         username = None
         password = None
         url = None
