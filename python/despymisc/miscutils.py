@@ -21,20 +21,6 @@ def fwdebug(msglvl, envdbgvar, msgstr, msgprefix=''):
     """ print debugging message based upon thresholds """
     # environment debug variable overrides code set level
 
-#    dbglvl = 0
-#
-#    if 'DESDM_DEBUG' in os.environ:   # global override
-#        dbglvl = os.environ['DESDM_DEBUG']
-#    elif envdbgvar in os.environ:
-#        dbglvl = os.environ[envdbgvar]
-#    elif '_' in envdbgvar:
-#        prefix = envdbgvar.split('_')[0]
-#        if '%s_DEBUG' % prefix in os.environ:
-#            dbglvl = os.environ['%s_DEBUG' % prefix]
-#
-#    if int(dbglvl) >= int(msglvl):
-#        print "%s%s - %s - %s" % (msgprefix, datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S"), inspect.stack()[1][3], msgstr)
-
     if fwdebug_check(msglvl, envdbgvar):
         fwdebug_print(msgstr, msgprefix)
 
@@ -74,7 +60,11 @@ def fwdie(msg, exitcode, depth=1):
 #######################################################################
 def fwsplit(fullstr, delim=','):
     """ Split by delim and trim substrs, expand #:# into range """
-    fullstr = re.sub('[()]', '', fullstr) # delete parens if exist
+    #fullstr = re.sub('[()]', '', fullstr) # delete parens if exist
+    fullstr = fullstr.replace('(','')
+    fullstr = fullstr.replace(')','')
+    fullstr = fullstr.replace('[','')
+    fullstr = fullstr.replace(']','')
     items = []
     for item in [x.strip() for x in fullstr.split(delim)]:
         m = re.match(r"(\d+):(\d+)", item)
