@@ -13,11 +13,12 @@ USAGE:
 '''
 
 import os
-import urllib, urllib2
+import urllib
+import urllib2
 from base64 import b64encode
 
 def get_credentials(desfile=os.path.join(os.environ['HOME'], '.desservices.ini'),
-        section='http-desarchive'):
+                    section='http-desarchive'):
 
     """
     Load the credentials using serviceaccess from a local .desservices file
@@ -27,48 +28,50 @@ def get_credentials(desfile=os.path.join(os.environ['HOME'], '.desservices.ini')
     try:
         from despyserviceaccess import serviceaccess
         creds = serviceaccess.parse(desfile, section)
-        USERNAME = creds['user']
-        PASSWORD = creds['passwd']
-        URL =      creds.get('url',None)
+        username = creds['user']
+        password = creds['passwd']
+        url = creds.get('url', None)
     except:
-        USERNAME = None
-        PASSWORD = None
-        URL = None
+        username = None
+        password = None
+        url = None
         warning = """WARNING: could not load credentials from .desservices.ini file for section %s
         please make sure sections make sense""" % section
         print warning
 
-    return USERNAME, PASSWORD, URL
+    return username, password, url
 
 def download_file_des(url, filename, desfile=None, section='http-desarchive'):
 
     ''' Download files using the DES services files.
     '''
     # Get the credentials
-    USERNAME, PASSWORD, URL = get_credentials(desfile=desfile, section=section)
-    auth = (USERNAME, PASSWORD)
+    username, password, _ = get_credentials(desfile=desfile, section=section)
+    auth = (username, password)
     req = Request(auth)
     req.download_file(url, filename)
 
 class Request(object):
-    '''
-    '''
+    """ Requests class for retrieving data
+    """
 
     def __init__(self, auth):
 
         # auth = (USERNAME, PASSWORD)
         self.auth = auth
-        self.url = None 
+        self.url = None
         self.response = None
         self.error_status = (False, '')
+        self.data = None
 
     def POST(self, url, data=None):
-        ''' '''
-        if not type(data)==dict:
-            raise ValueError(('The data kwarg needs to be set and of type '
-                'dictionary.'))
-        else:
-            self.data = data
+        """ send a POST to the url
+        """
+        if not isinstance(data, dict):
+            raise ValueError('The data kwarg needs to be set and of type '
+                             'dictionary.')
+
+        self.data = data
         if not url:
             raise ValueError('You need to provide an url kwarg.')
         else:
@@ -77,15 +80,15 @@ class Request(object):
         urllib_req = urllib2.Request(self.url)
         if any(self.auth):
             urllib_req.add_header('Authorization',
-                    'Basic ' + b64encode(self.auth[0]+':'+self.auth[1]))
+                                  'Basic ' + b64encode(self.auth[0] + ':' + self.auth[1]))
         try:
-            self.response = urllib2.urlopen(urllib_req,
-                    urllib.urlencode(self.data))
-        except Exception, e:
-            self.error_status = (True, str(e))
+            self.response = urllib2.urlopen(urllib_req, urllib.urlencode(self.data))
+        except Exception, exc:
+            self.error_status = (True, str(exc))
 
     def get_read(self, url):
-        ''' '''
+        """ read a response
+        """
         if not url:
             raise ValueError('You need to provide an url kwarg.')
         else:
@@ -94,32 +97,34 @@ class Request(object):
         urllib_req = urllib2.Request(self.url)
         if any(self.auth):
             urllib_req.add_header('Authorization',
-                    'Basic ' + b64encode(self.auth[0]+':'+self.auth[1]))
+                                  'Basic ' + b64encode(self.auth[0] + ':' + self.auth[1]))
         try:
             self.response = urllib2.urlopen(urllib_req)
             return self.response.read()
-        except Exception, e:
-            self.error_status = (True, str(e))
+        except Exception, exc:
+            self.error_status = (True, str(exc))
 
     def download_file(self, url, filename):
-        ''' '''
+        """ Download the requested file
+        """
         with open(filename, 'wb') as f:
             f.write(self.get_read(url))
 
     def GET(self, url, params={}):
-        ''' '''
+        """ perform a GET to the given url
+        """
         if not url:
             raise ValueError('You need to provide an url kwarg.')
         else:
             self.url = url
 
-        url_params = '?'+'&'.join([str(k)+'='+str(v) for k, v in 
-                                                 params.iteritems()])
+        url_params = '?'+'&'.join([str(k) + '=' + str(v) for k, v in
+                                   params.iteritems()])
         urllib_req = urllib2.Request(self.url+url_params)
         if any(self.auth):
             urllib_req.add_header('Authorization',
-                    'Basic ' + b64encode(self.auth[0]+':'+self.auth[1]))
+                                  'Basic ' + b64encode(self.auth[0] + ':' + self.auth[1]))
         try:
             self.response = urllib2.urlopen(urllib_req)
-        except Exception, e:
-            self.error_status = (True, str(e))
+        except Exception, exc:
+            self.error_status = (True, str(exc))
