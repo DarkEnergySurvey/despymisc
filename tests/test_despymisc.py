@@ -13,6 +13,7 @@ from mock import patch, mock_open
 from despymisc.xmlslurp import Xmlslurper
 import despymisc.subprocess4 as sub4
 import despymisc.scamputil as scu
+import despymisc.misctime as mt
 
 @contextmanager
 def capture_output():
@@ -2178,6 +2179,15 @@ END
         self.assertEqual(os.stat(output).st_size, 0)
         os.unlink(output)
         os.unlink('malformed.ahead')
+
+class TestMisctime(unittest.TestCase):
+    def test_good_date(self):
+        datestr = '2019-09-15T10:35:22'
+        self.assertEqual('20190914', mt.convert_utc_str_to_nite(datestr))
+        datestr = '2019-09-15T14:59:59.99'
+        self.assertEqual('20190914', mt.convert_utc_str_to_nite(datestr))
+        datestr = '2019-09-15T15:00:01.00'
+        self.assertEqual('20190915', mt.convert_utc_str_to_nite(datestr))
 
 if __name__ == '__main__':
     unittest.main()
