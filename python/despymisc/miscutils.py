@@ -3,6 +3,7 @@
 # $Rev:: 41806                            $:  # Revision of last commit.
 # $LastChangedBy:: felipe                 $:  # Author of last commit.
 # $LastChangedDate:: 2016-05-03 11:03:59 #$:  # Date of last commit.
+""" Miscellaneous support functions for framework """
 
 import re
 import os
@@ -11,11 +12,9 @@ import sys
 import datetime
 import inspect
 import errno
-from collections import OrderedDict
 from collections import Mapping
 import logging
 
-""" Miscellaneous support functions for framework """
 
 #######################################################################
 def fwdebug(msglvl, envdbgvar, msgstr, msgprefix=''):
@@ -59,19 +58,18 @@ def fwdebug_check(msglvl, envdbgvar):
 
 #######################################################################
 def fwdebug_print(msgstr, msgprefix=''):
+    """ print debugging message """
     print "%s%s - %s - %s" % (msgprefix, datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S"),
-           inspect.stack()[1][3], msgstr)
-
+                              inspect.stack()[1][3], msgstr)
 
 #######################################################################
 def fwdie(msg, exitcode, depth=1):
     """ abort after printing short message include some info from backtrace """
     frame = inspect.stack()[depth]
-    file = os.path.basename(frame[1])
-    print "\n\n%s:%s:%s: %s" % (file, frame[3], frame[2], msg)
+    fle = os.path.basename(frame[1])
+    print "\n\n%s:%s:%s: %s" % (fle, frame[3], frame[2], msg)
 
     sys.exit(exitcode)
-
 
 #######################################################################
 def fwsplit(fullstr, delim=','):
@@ -79,7 +77,7 @@ def fwsplit(fullstr, delim=','):
     fullstr = re.sub('[()]', '', fullstr) # delete parens if exist
     items = []
     for item in [x.strip() for x in fullstr.split(delim)]:
-        m = re.match("(\d+):(\d+)", item)
+        m = re.match(r"(\d+):(\d+)", item)
         if m:
             items.extend(map(str, range(int(m.group(1)),
                                         int(m.group(2))+1)))
@@ -87,12 +85,11 @@ def fwsplit(fullstr, delim=','):
             items.append(item)
     return items
 
-
 #######################################################################
 def coremakedirs(thedir):
     """ Call os.makedirs handling path already exists """
-    if len(thedir) > 0 and not os.path.exists(thedir):  # some parallel filesystems really don't like
-                                                        # trying to make directory if it already exists
+    if thedir and not os.path.exists(thedir):  # some parallel filesystems really don't like
+                                               # trying to make directory if it already exists
         try:
             os.makedirs(thedir)
         except OSError as exc:      # go ahead and check for race condition
@@ -102,7 +99,6 @@ def coremakedirs(thedir):
                 print "Error: problems making directory: %s" % exc
                 raise
 
-
 #######################################################################
 CU_PARSE_HDU = 8
 CU_PARSE_PATH = 4
@@ -110,7 +106,8 @@ CU_PARSE_FILENAME = 2
 CU_PARSE_EXTENSION = 1   # deprecating use CU_PARSE_COMPRESSION
 CU_PARSE_COMPRESSION = 1
 CU_PARSE_BASENAME = 0
-def parse_fullname(fullname, retmask = 2):
+def parse_fullname(fullname, retmask=2):
+    """ parse the full name of a file """
     fwdebug(3, 'MISCUTILS_DEBUG', "fullname = %s" % fullname)
     fwdebug(3, 'MISCUTILS_DEBUG', "retmask = %s" % retmask)
 
@@ -139,7 +136,7 @@ def parse_fullname(fullname, retmask = 2):
         #if '/' in fullname: # if given full path, canonicalize it
         #    fullname = os.path.realpath(fullname)
         path = os.path.dirname(fullname)
-        if len(path) == 0:   # return None instead of empty string
+        if path:   # return None instead of empty string
             retval.append(None)
         else:
             retval.append(path)
@@ -176,16 +173,16 @@ def parse_fullname(fullname, retmask = 2):
         if retmask & CU_PARSE_HDU:
             retval.append(hdu)
 
-    if len(retval) == 0:
+    if retval:
         retval = None
     elif len(retval) == 1:  # if only 1 entry in array, return as scalar
         retval = retval[0]
 
     return retval
 
-
 #######################################################################
 def convertBool(var):
+    """ convert text to a bool"""
     #print "Before:", var, type(var)
     newvar = None
     if var is not None:
@@ -196,9 +193,9 @@ def convertBool(var):
             try:
                 newvar = bool(int(var))
             except ValueError:
-                if var.lower() in ['y','yes','true']:
+                if var.lower() in ['y', 'yes', 'true']:
                     newvar = True
-                elif var.lower() in ['n','no','false']:
+                elif var.lower() in ['n', 'no', 'false']:
                     newvar = False
         elif tvar == bool:
             newvar = var
@@ -215,6 +212,7 @@ def convertBool(var):
 #    Function argument value overrides environment variable
 #    Nothing set defaults to using DB
 def use_db(arg):
+    """ determine if we are using the database or not """
     use = True
 
     args_use_db = None
@@ -245,6 +243,7 @@ def use_db(arg):
 #    Function argument value overrides environment variable
 #    Lower case key for arg lookup, Upper case for environ lookup
 def checkTrue(key, arg, default=True):
+    """ check whether a value is true"""
     ret_val = default
 
     args_val = None
@@ -255,7 +254,7 @@ def checkTrue(key, arg, default=True):
         if key.lower() in arg:
             scalar_arg = arg[key.lower()]
     elif hasattr(arg, key.lower()):
-        scalar_arg = getattr(arg,key.lower())
+        scalar_arg = getattr(arg, key.lower())
     else:
         scalar_arg = arg
 
@@ -280,15 +279,15 @@ def pretty_print_dict(the_dict, out_file=None, sortit=False, indent=4):
     if out_file is None:
         out_file = sys.stdout
     if the_dict is None:
-        assert("Passed in None for dictionary arg")
+        assert "Passed in None for dictionary arg"
     if not isinstance(the_dict, dict):
-        assert("Passed in non-dictionary object for dictionary arg")
+        assert "Passed in non-dictionary object for dictionary arg"
     _recurs_pretty_print_dict(the_dict, out_file, sortit, indent, 0)
 
 
 def _recurs_pretty_print_dict(the_dict, out_file, sortit, inc_indent, curr_indent):
     """Internal recursive function to do actual WCL writing"""
-    if len(the_dict) > 0:
+    if the_dict:
         if sortit:
             dictitems = sorted(the_dict.items())
         else:
@@ -298,7 +297,7 @@ def _recurs_pretty_print_dict(the_dict, out_file, sortit, inc_indent, curr_inden
             if isinstance(value, dict):
                 print >> out_file, ' ' * curr_indent + str(key)
                 _recurs_pretty_print_dict(value, out_file, sortit, inc_indent,
-                                    curr_indent + inc_indent)
+                                          curr_indent + inc_indent)
             else:
                 print >> out_file, ' ' * curr_indent + str(key) + \
                         " = " + str(value)
@@ -359,7 +358,7 @@ def get_list_directories(filelist):
         filedir = parse_fullname(f, CU_PARSE_PATH)
         relparents = filedir.split('/')
         thedir = ""
-        for i in range(1,len(relparents)):
+        for i in range(1, len(relparents)):
             thedir += '/' + relparents[i]
             dirlist[thedir] = True
 
@@ -370,17 +369,16 @@ def get_list_directories(filelist):
 #########################################################################
 # Some functions added by Felipe Menanteau, coming from the old despyutils
 
-def elapsed_time(t1,verbose=False):
+def elapsed_time(t1, verbose=False):
     """ Formating of the elapsed time """
     import time
-    t2    = time.time()
-    stime = "%dm %2.2fs" % ( int( (t2-t1)/60.), (t2-t1) - 60*int((t2-t1)/60.))
+    t2 = time.time()
+    stime = "%dm %2.2fs" % (int((t2 - t1) / 60.), (t2 - t1) - 60 * int((t2 - t1) / 60.))
     if verbose:
         print "# Elapsed time: %s" % stime
     return stime
 
-def query2dict_of_lists(query,dbhandle):
-
+def query2dict_of_lists(query, dbhandle):
     """
     Transforms the result of an SQL query and a Database handle object [dhandle]
     into a dictionary of lists
@@ -404,7 +402,7 @@ def query2dict_of_lists(query,dbhandle):
     return querydic
 
 
-def create_logger(level=logging.NOTSET,name='default'):
+def create_logger(level=logging.NOTSET, name='default'):
     logging.basicConfig(level=level,
                         format='[%(asctime)s] [%(levelname)s] %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
