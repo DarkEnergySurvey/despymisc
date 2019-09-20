@@ -3,17 +3,23 @@
 
 import sys
 
-filename = sys.argv[1]
-col      = int(sys.argv[2])
-
 IDs = []
-for line in open(filename).readlines():
+def main():
+    """ Main func """
+    global IDs
+    filename = sys.argv[1]
+    col = int(sys.argv[2])
 
-    if line[0] == "#":
-        continue
+    for line in open(filename).readlines():
 
-    vals = line.split()
-    ID   = vals[col]
-    if ID not in IDs:
-        print line.rstrip()
-        IDs.append(ID)
+        if line[0] == "#":
+            continue
+
+        vals = line.split()
+        ID = vals[col]
+        if ID not in IDs:
+            print line.rstrip()
+            IDs.append(ID)
+
+if __name__ == "__main__":
+    main()
