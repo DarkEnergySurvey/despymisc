@@ -2887,6 +2887,11 @@ class TestSplitAheadBin(unittest.TestCase):
         args.infile = None
         self.assertFalse(sabc.main(args))
 
+        with capture_output() as (out, err):
+            args.verbose = True
+            self.assertFalse(sabc.main(args))
+            output = out.getvalue().strip()
+            self.assertTrue('infile' in output)
 
 if __name__ == '__main__':
     unittest.main()
