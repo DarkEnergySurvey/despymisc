@@ -19,8 +19,10 @@ import despymisc.misctime as mt
 import despymisc.create_special_metadata as csm
 import despymisc.http_requests as hrq
 import despymisc.miscutils as mut
+import despymisc.provdefs as provdefs
+import split_ahead_by_ccd as sabc
 
-
+FILENAME = 'test.ahead'
 @contextmanager
 def capture_output():
     new_out, new_err = StringIO(), StringIO()
@@ -31,231 +33,9 @@ def capture_output():
     finally:
         sys.stdout, sys.stderr = old_out, old_err
 
-
-class MockDbi(object):
-    def __init__(self, *args, **kwargs):
-        if 'data' in kwargs.keys() and kwargs['data']:
-            self.data = kwargs['data']
-        else:
-            self.data = [(('the_root',),)]
-        if 'descr' in kwargs.keys():
-            self.descr = kwargs['descr']
-        else :
-            self.descr = []
-        self.con = self.Connection()
-        self._curs = None
-        self.count = {'cursor': 0,
-                      'commit': 0,
-                      'get_positional_bind_string': 0}
-
-    def get_positional_bind_string(self, *args, **kwargs):
-        self.count['get_positional_bind_string'] += 1
-
-    def getCount(self, attrib):
-        if attrib in self.count.keys():
-            return self.count[attrib]
-        try:
-            return self.con.getCount(attrib)
-        except:
-            return self._curs.getCount(attrib)
-
-    def cursor(self):
-        self._curs = self.Cursor(self.data, self.descr)
-        self.count['cursor'] += 1
-        return self._curs
-
-    def setThrow(self, value):
-        self.con.throw = value
-
-    class Connection(object):
-        def __init__(self):
-            self.throw = False
-            self.count = {'ping': 0}
-
-        def getCount(self, attrib):
-            return self.count[attrib]
-
-        def ping(self):
-            self.count['ping'] += 1
-            if self.throw:
-                raise Exception()
-            return True
-
-    class Cursor(object):
-        def __init__(self, data=[], descr=[]):
-            self.data = data
-            self.current_data = None
-            self.select = False
-            self.data.reverse()
-            self.description = None
-            self.descr_data = descr
-            self.descr_data.reverse()
-            self.count = {'execute': 0,
-                          'fetchall': 0,
-                          'prepare': 0,
-                          'executemany': 0}
-            self._idx = 0
-
-        def next(self):
-            if self._idx < len(self.current_data):
-                self._idx += 1
-                return self.current_data[self._idx - 1]
-            raise StopIteration
-
-        def __iter__(self):
-            return self
-
-        def getCount(self, attrib):
-            return self.count[attrib]
-
-        def setData(self, data):
-            self.data = data
-            self.data.reverse()
-
-        def execute(self,*args, **kwargs):
-            self._idx = 0
-            if args:
-                if isinstance(args[0], str):
-                    if args[0].lower().startswith('select'):
-                        try:
-                            self.description = self.descr_data.pop()
-                        except:
-                            self.description = None
-                        try:
-                            self.current_data = self.data.pop()
-                        except:
-                            self.current_data = None
-            elif self.select:
-                try:
-                    self.description = self.descr_data.pop()
-                except:
-                    self.description = None
-                try:
-                    self.current_data = self.data.pop()
-                except:
-                    self.current_data = None
-            self.count['execute'] += 1
-
-        def fetchall(self):
-            #print "DATA",self.data
-            self.count['fetchall'] += 1
-            if self.current_data:
-                return self.current_data
-            return None
-
-        def prepare(self, *args, **kwargs):
-            self.select = False
-            if args:
-                if isinstance(args[0], str):
-                    if args[0].lower().startswith('select'):
-                        self.select = True
-            self.count['prepare'] += 1
-
-        def executemany(self, *args, **kwargs):
-            self._idx = 0
-            self.select = False
-            self.count['executemany'] += 1
-
-    def setReturn(self, data):
-        self.data = data
-
-    def setDescription(self, descr):
-        self.descr = descr
-
-    def commit(self):
-        self.count['commit'] += 1
-
-
-class TestXmlslurper(unittest.TestCase):
-    tablelist = ("Astrometric_Instruments",
-                 "FGroups",
-                 "Fields",
-                 "Photometric_Instruments",
-                 "PSF_Extensions",
-                 "PSF_Fields",
-                 "Warnings")
-    xmldata = """<main><TABLE name="FGroups">
-<FIELD name="Field1" datatype="float"/>
-<field name="Field2" datatype="int"/>
-<field name="Field3" datatype="str"/>
-<field name="Field4" datatype="int" arraysize="5"/>
-<field name="Field5" datatype="char" arraysize="2"/>
-<field name="field6" datatype="float" arraysize="2"/>
-<field name="field7" datatype="bool" arraysize="3"/>
-<TR>
- <TD>12345.6</TD><td>25</td><td>Blah</td><td>2 4 6 8 10</td><td>first second</td><td>2.5 6.7</td><td>1 0 1</td>
-</TR>
-<hi/>
-</TABLE>
-<table name="bad_table">
-<field name="f1" datatype="int"/>
-<tr><td>5</td></tr>
-</table>
-</main>
-"""
-    def test_all(self):
-        with patch('despymisc.xmlslurp.open', mock_open(read_data=self.xmldata)) as mo:
-            data = Xmlslurper('filename', self.tablelist)
-            self.assertTrue('FGroups' in data.gettables().keys())
-            self.assertTrue(len(data.gettables().keys()), 1)
-            self.assertEqual(len(data.keys()), 1)
-            tab = data.gettables()
-            self.assertEqual(tab['FGroups'][0]['field1'], 12345.6)
-
-class TestSubprocess4(unittest.TestCase):
-    class TestError(OSError):
-        def __init__(self, text=''):
-            OSError.__init__(self, text)
-            self.errno = errno.ECHILD
-
-    def test_init(self):
-        _ = sub4.Popen(['ls','-1'])
-
-    def test_wait(self):
-        start = time.time()
-        po = sub4.Popen(['sleep', '10'])
-        po.wait4()
-        self.assertTrue(time.time() - start >= 10.)
-
-    def test_waitError(self):
-        with patch('despymisc.subprocess4.os.wait4', side_effect=self.TestError()):
-            start = time.time()
-            po = sub4.Popen(['sleep', '10'])
-            self.assertTrue(po.wait4() == 0)
-            self.assertTrue(time.time() - start < 10.)
-        with patch('despymisc.subprocess4.os.wait4', side_effect=OSError()):
-            with self.assertRaises(OSError):
-                po = sub4.Popen(['sleep', '10'])
-                po.wait4()
-
-    def test_fastReturn(self):
-        po = sub4.Popen(['ls','-1'])
-        time.sleep(3)
-        po.returncode = 0
-        self.assertIsNotNone(po.returncode)
-        self.assertIsNotNone(po.wait4())
-
-    def test_segfault(self):
-        with capture_output() as (out, err):
-            po = sub4.Popen(['ls','-1'])
-            po.returncode = -signal.SIGSEGV
-            self.assertTrue(-signal.SIGSEGV == po.wait4())
-            output = out.getvalue().strip()
-            self.assertTrue('SEGMENTATION' in output)
-
-    def test_mismatchPID(self):
-        with patch('despymisc.subprocess4.os.wait4', return_value=(0,1,{})) as osw:
-            po = sub4.Popen(['ls'])
-            pu = psutil.Process(po.pid)
-            pu.terminate()
-            pu.wait()
-            self.assertEqual(po.wait4(), 1)
-
-class TestScamputil(unittest.TestCase):
-    def setUp(self):
-        self.file = 'test.ahead'
-        f = open(self.file, 'w')
-        f.write("""CCDNUM  =                    1 / CCD number
+def makeAheadFile():
+    f = open(FILENAME, 'w')
+    f.write("""CCDNUM  =                    1 / CCD number
 BAND    = 'g       '           / Band
 EQUINOX =        2000.00000000 / Mean equinox
 RADESYS = 'ICRS    '           / Astrometric system
@@ -2265,15 +2045,239 @@ PV2_9   =   7.834910380586E-03 / Projection distortion parameter
 PV2_10  =  -2.864578065441E-03 / Projection distortion parameter
 END
 """)
-        f.close()
+    f.close()
+
+
+class MockDbi(object):
+    def __init__(self, *args, **kwargs):
+        if 'data' in kwargs.keys() and kwargs['data']:
+            self.data = kwargs['data']
+        else:
+            self.data = [(('the_root',),)]
+        if 'descr' in kwargs.keys():
+            self.descr = kwargs['descr']
+        else :
+            self.descr = []
+        self.con = self.Connection()
+        self._curs = None
+        self.count = {'cursor': 0,
+                      'commit': 0,
+                      'get_positional_bind_string': 0}
+
+    def get_positional_bind_string(self, *args, **kwargs):
+        self.count['get_positional_bind_string'] += 1
+
+    def getCount(self, attrib):
+        if attrib in self.count.keys():
+            return self.count[attrib]
+        try:
+            return self.con.getCount(attrib)
+        except:
+            return self._curs.getCount(attrib)
+
+    def cursor(self):
+        self._curs = self.Cursor(self.data, self.descr)
+        self.count['cursor'] += 1
+        return self._curs
+
+    def setThrow(self, value):
+        self.con.throw = value
+
+    class Connection(object):
+        def __init__(self):
+            self.throw = False
+            self.count = {'ping': 0}
+
+        def getCount(self, attrib):
+            return self.count[attrib]
+
+        def ping(self):
+            self.count['ping'] += 1
+            if self.throw:
+                raise Exception()
+            return True
+
+    class Cursor(object):
+        def __init__(self, data=[], descr=[]):
+            self.data = data
+            self.current_data = None
+            self.select = False
+            self.data.reverse()
+            self.description = None
+            self.descr_data = descr
+            self.descr_data.reverse()
+            self.count = {'execute': 0,
+                          'fetchall': 0,
+                          'prepare': 0,
+                          'executemany': 0}
+            self._idx = 0
+
+        def next(self):
+            if self._idx < len(self.current_data):
+                self._idx += 1
+                return self.current_data[self._idx - 1]
+            raise StopIteration
+
+        def __iter__(self):
+            return self
+
+        def getCount(self, attrib):
+            return self.count[attrib]
+
+        def setData(self, data):
+            self.data = data
+            self.data.reverse()
+
+        def execute(self,*args, **kwargs):
+            self._idx = 0
+            if args:
+                if isinstance(args[0], str):
+                    if args[0].lower().startswith('select'):
+                        try:
+                            self.description = self.descr_data.pop()
+                        except:
+                            self.description = None
+                        try:
+                            self.current_data = self.data.pop()
+                        except:
+                            self.current_data = None
+            elif self.select:
+                try:
+                    self.description = self.descr_data.pop()
+                except:
+                    self.description = None
+                try:
+                    self.current_data = self.data.pop()
+                except:
+                    self.current_data = None
+            self.count['execute'] += 1
+
+        def fetchall(self):
+            #print "DATA",self.data
+            self.count['fetchall'] += 1
+            if self.current_data:
+                return self.current_data
+            return None
+
+        def prepare(self, *args, **kwargs):
+            self.select = False
+            if args:
+                if isinstance(args[0], str):
+                    if args[0].lower().startswith('select'):
+                        self.select = True
+            self.count['prepare'] += 1
+
+        def executemany(self, *args, **kwargs):
+            self._idx = 0
+            self.select = False
+            self.count['executemany'] += 1
+
+    def setReturn(self, data):
+        self.data = data
+
+    def setDescription(self, descr):
+        self.descr = descr
+
+    def commit(self):
+        self.count['commit'] += 1
+
+
+class TestXmlslurper(unittest.TestCase):
+    tablelist = ("Astrometric_Instruments",
+                 "FGroups",
+                 "Fields",
+                 "Photometric_Instruments",
+                 "PSF_Extensions",
+                 "PSF_Fields",
+                 "Warnings")
+    xmldata = """<main><TABLE name="FGroups">
+<FIELD name="Field1" datatype="float"/>
+<field name="Field2" datatype="int"/>
+<field name="Field3" datatype="str"/>
+<field name="Field4" datatype="int" arraysize="5"/>
+<field name="Field5" datatype="char" arraysize="2"/>
+<field name="field6" datatype="float" arraysize="2"/>
+<field name="field7" datatype="bool" arraysize="3"/>
+<TR>
+ <TD>12345.6</TD><td>25</td><td>Blah</td><td>2 4 6 8 10</td><td>first second</td><td>2.5 6.7</td><td>1 0 1</td>
+</TR>
+<hi/>
+</TABLE>
+<table name="bad_table">
+<field name="f1" datatype="int"/>
+<tr><td>5</td></tr>
+</table>
+</main>
+"""
+    def test_all(self):
+        with patch('despymisc.xmlslurp.open', mock_open(read_data=self.xmldata)) as mo:
+            data = Xmlslurper('filename', self.tablelist)
+            self.assertTrue('FGroups' in data.gettables().keys())
+            self.assertTrue(len(data.gettables().keys()), 1)
+            self.assertEqual(len(data.keys()), 1)
+            tab = data.gettables()
+            self.assertEqual(tab['FGroups'][0]['field1'], 12345.6)
+
+class TestSubprocess4(unittest.TestCase):
+    class TestError(OSError):
+        def __init__(self, text=''):
+            OSError.__init__(self, text)
+            self.errno = errno.ECHILD
+
+    def test_init(self):
+        _ = sub4.Popen(['ls','-1'])
+
+    def test_wait(self):
+        start = time.time()
+        po = sub4.Popen(['sleep', '10'])
+        po.wait4()
+        self.assertTrue(time.time() - start >= 10.)
+
+    def test_waitError(self):
+        with patch('despymisc.subprocess4.os.wait4', side_effect=self.TestError()):
+            start = time.time()
+            po = sub4.Popen(['sleep', '10'])
+            self.assertTrue(po.wait4() == 0)
+            self.assertTrue(time.time() - start < 10.)
+        with patch('despymisc.subprocess4.os.wait4', side_effect=OSError()):
+            with self.assertRaises(OSError):
+                po = sub4.Popen(['sleep', '10'])
+                po.wait4()
+
+    def test_fastReturn(self):
+        po = sub4.Popen(['ls','-1'])
+        time.sleep(3)
+        po.returncode = 0
+        self.assertIsNotNone(po.returncode)
+        self.assertIsNotNone(po.wait4())
+
+    def test_segfault(self):
+        with capture_output() as (out, err):
+            po = sub4.Popen(['ls','-1'])
+            po.returncode = -signal.SIGSEGV
+            self.assertTrue(-signal.SIGSEGV == po.wait4())
+            output = out.getvalue().strip()
+            self.assertTrue('SEGMENTATION' in output)
+
+    def test_mismatchPID(self):
+        with patch('despymisc.subprocess4.os.wait4', return_value=(0,1,{})) as osw:
+            po = sub4.Popen(['ls'])
+            pu = psutil.Process(po.pid)
+            pu.terminate()
+            pu.wait()
+            self.assertEqual(po.wait4(), 1)
+
+class TestScamputil(unittest.TestCase):
+    def setUp(self):
+        makeAheadFile()
 
     def tearDown(self):
-        os.unlink(self.file)
+        os.unlink(FILENAME)
 
     def test_all_good_headers(self):
         output = 'test.out'
         ccds = [1, 3, 4, 5, 6, 7, 8, 9]
-        self.assertTrue(scu.split_ahead_by_ccd(self.file, output, ccds))
+        self.assertTrue(scu.split_ahead_by_ccd(FILENAME, output, ccds))
         found_ccds = []
         found_hist = False
         found_flux = False
@@ -2301,7 +2305,7 @@ END
         output = 'test.junk'
         ccds = [1,2,3]
         with capture_output() as (out, err):
-            self.assertFalse(scu.split_ahead_by_ccd(self.file, output, ccds))
+            self.assertFalse(scu.split_ahead_by_ccd(FILENAME, output, ccds))
             outp = out.getvalue().strip()
             self.assertTrue('2 is not present' in outp)
         self.assertFalse(os.path.exists(output))
@@ -2848,6 +2852,41 @@ class TestMiscutils(unittest.TestCase):
         self.assertTrue(isinstance(lm, logging.Logger))
         self.assertEqual(lm.name, 'mylogger')
         self.assertEqual(lm.level, logging.INFO)
+
+class TestSplitAheadBin(unittest.TestCase):
+    def test_parseArgs(self):
+        temp = copy.deepcopy(sys.argv)
+        sys.argv = ['split_ahead_by_ccd.py',
+                    '--infile=myfile',
+                    '--ccdlist=2,3,4,5']
+        args = sabc.parseArgs()
+        self.assertFalse(args.verbose)
+        self.assertEqual(args.infile, 'myfile')
+        sys.argv = temp
+
+    def test_main(self):
+        makeAheadFile()
+        temp = copy.deepcopy(sys.argv)
+        sys.argv = ['split_ahead_by_ccd.py',
+                    '--infile=%s' % FILENAME,
+                    '--ccdlist=3,4,5',
+                    '--outfile=/tmp/junk']
+        args = sabc.parseArgs()
+        sys.argv = temp
+
+        self.assertTrue(sabc.main(args))
+        args.ccdlist = 'All'
+        self.assertFalse(sabc.main(args)) # there are missing ccds
+
+        args.outfile = None
+        self.assertFalse(sabc.main(args))
+
+        os.unlink(FILENAME)
+        self.assertFalse(sabc.main(args))
+
+        args.infile = None
+        self.assertFalse(sabc.main(args))
+
 
 if __name__ == '__main__':
     unittest.main()
