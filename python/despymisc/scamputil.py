@@ -32,7 +32,7 @@ def split_ahead_by_ccd(infile, outfile, ccd_list):
     #  - avoid opening a file that will be blank at the end of this.
     #  - can check that exactly the correct number of headers are present (prior to writing).
     icnt = 0
-    f1 = open(infile,'r')
+    f1 = open(infile, 'r')
     head_set = {}
     tmp_dict = {}
     tmp_lines = []
@@ -65,13 +65,13 @@ def split_ahead_by_ccd(infile, outfile, ccd_list):
     if not ccd_check:
         #  If all CCDs/HDUs needed are not present then set flag and exit
         return False
-    else:
-        # Step through the list of CCDs and write each .ahead:HDU-like piece.    print len(head_set)
-        fout = open(outfile, 'w')
-        for ccd in ccd_list:
-            if ccd in head_set:
-                tmp_header = head_set[ccd]
-                for hline in tmp_header:
-                    fout.write("%s\n" % (hline))
-        fout.close()
-        return True
+
+    # Step through the list of CCDs and write each .ahead:HDU-like piece.    print len(head_set)
+    fout = open(outfile, 'w')
+    for ccd in ccd_list:
+        if ccd in head_set:
+            tmp_header = head_set[ccd]
+            for hline in tmp_header:
+                fout.write("%s\n" % (hline))
+    fout.close()
+    return True
