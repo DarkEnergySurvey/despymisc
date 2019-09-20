@@ -21,6 +21,7 @@ import despymisc.http_requests as hrq
 import despymisc.miscutils as mut
 import despymisc.provdefs as provdefs
 import split_ahead_by_ccd as sabc
+import remove_duplicates_from_list as rdfl
 
 FILENAME = 'test.ahead'
 @contextmanager
@@ -2892,6 +2893,35 @@ class TestSplitAheadBin(unittest.TestCase):
             self.assertFalse(sabc.main(args))
             output = out.getvalue().strip()
             self.assertTrue('infile' in output)
+
+class TestRemoveDuplicatesFromList(unittest.TestCase):
+    def test_main(self):
+        fname = 'test.file'
+        f = open(fname, 'w')
+        f.write("""# start
+a  1  5
+b  2  5
+c  3  6
+d  4  7
+e  5  6
+# f  6  9
+g  7  8
+""")
+        f.close()
+        temp = copy.deepcopy(sys.argv)
+        sys.argv = ['remove_duplicates_from_list.py',
+                    fname,
+                    '1']
+        rdfl.main()
+        self.assertEqual(len(rdfl.IDs), 6)
+        sys.argv = ['remove_duplicates_from_list.py',
+                    fname,
+                    '2']
+        rdfl.IDs = []
+        rdfl.main()
+        self.assertEqual(len(rdfl.IDs), 4)
+        sys.argv = temp
+        os.unlink(fname)
 
 if __name__ == '__main__':
     unittest.main()
