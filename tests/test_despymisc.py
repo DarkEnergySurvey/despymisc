@@ -2651,6 +2651,7 @@ class TestMiscutils(unittest.TestCase):
 
         self.assertEqual(mut.parse_fullname(fname, mut.CU_PARSE_COMPRESSION), '.fz')
         self.assertIsNone(mut.parse_fullname(name + '.ff[0]', mut.CU_PARSE_COMPRESSION))
+        self.assertIsNotNone(mut.parse_fullname(name + '.ff[0]', mut.CU_PARSE_FILENAME))
         ret = mut.parse_fullname(fname, mut.CU_PARSE_COMPRESSION | mut.CU_PARSE_FILENAME)
         self.assertEqual(len(ret), 2)
         self.assertEqual(ret[0], name)
@@ -2672,7 +2673,7 @@ class TestMiscutils(unittest.TestCase):
         ret = mut.parse_fullname(pth + name + '.fz', mut.CU_PARSE_PATH | mut.CU_PARSE_COMPRESSION | mut.CU_PARSE_FILENAME)
         self.assertEqual(len(ret), 3)
         self.assertEqual(ret[0], pth[:-1])
-        self.assertIsNone(mut.parse_fullname(name, 100))
+        self.assertIsNone(mut.parse_fullname(name, 10000))
 
     def test_convertBool(self):
         self.assertTrue(mut.convertBool('True'))
