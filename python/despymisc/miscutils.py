@@ -61,10 +61,10 @@ def fwdie(msg, exitcode, depth=1):
 def fwsplit(fullstr, delim=','):
     """ Split by delim and trim substrs, expand #:# into range """
     #fullstr = re.sub('[()]', '', fullstr) # delete parens if exist
-    fullstr = fullstr.replace('(','')
-    fullstr = fullstr.replace(')','')
-    fullstr = fullstr.replace('[','')
-    fullstr = fullstr.replace(']','')
+    fullstr = fullstr.replace('(', '')
+    fullstr = fullstr.replace(')', '')
+    fullstr = fullstr.replace('[', '')
+    fullstr = fullstr.replace(']', '')
     items = []
     for item in [x.strip() for x in fullstr.split(delim)]:
         m = re.match(r"(\d+):(\d+)", item)
@@ -96,13 +96,12 @@ CU_PARSE_FILENAME = 2
 CU_PARSE_EXTENSION = 1   # deprecating use CU_PARSE_COMPRESSION
 CU_PARSE_COMPRESSION = 1
 CU_PARSE_BASENAME = 0
-def parse_fullname(fullname, retmask=2):
+def parse_fullname(fullname, retmask=CU_PARSE_FILENAME):
     """ parse the full name of a file """
     fwdebug(3, 'MISCUTILS_DEBUG', "fullname = %s" % fullname)
     fwdebug(3, 'MISCUTILS_DEBUG', "retmask = %s" % retmask)
 
     VALID_COMPRESS_EXT = ['fz', 'gz']
-
     hdu = None
     compress_ext = None
     filename = None
@@ -126,7 +125,7 @@ def parse_fullname(fullname, retmask=2):
         #if '/' in fullname: # if given full path, canonicalize it
         #    fullname = os.path.realpath(fullname)
         path = os.path.dirname(fullname)
-        if path:   # return None instead of empty string
+        if not path:   # return None instead of empty string
             retval.append(None)
         else:
             retval.append(path)
@@ -163,7 +162,7 @@ def parse_fullname(fullname, retmask=2):
         if retmask & CU_PARSE_HDU:
             retval.append(hdu)
 
-    if retval:
+    if not retval:
         retval = None
     elif len(retval) == 1:  # if only 1 entry in array, return as scalar
         retval = retval[0]
@@ -341,6 +340,7 @@ def updateOrderedDict(d, u):
 
 #######################################################################
 def get_list_directories(filelist):
+    """ get a list of directories from a file list """
     dirlist = {}
     for f in filelist:
         filedir = parse_fullname(f, CU_PARSE_PATH)
@@ -383,16 +383,21 @@ def query2dict_of_lists(query, dbhandle):
 
     querydic = {} # We will populate this one
     cols = zip(*list_of_tuples)
-    for k in range(len(cols)):
-        key = desc[k]
-        querydic[key] = cols[k]
+    for i, val in enumerate(cols):
+        key = desc[i]
+        querydic[key] = val
 
     return querydic
 
 
 def create_logger(level=logging.NOTSET, name='default'):
+    """ instantiate a logger """
     logging.basicConfig(level=level,
                         format='[%(asctime)s] [%(levelname)s] %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
     logger = logging.getLogger(name)
+    # ensure the proper level, if logging was instantiated by any other module,
+    # even an imported one, the level setting from that instance will take precedence
+    # over the one given in basicConfig above.
+    logger.setLevel(level)
     return logger
