@@ -1,12 +1,14 @@
 #!/usr/bin/env python2
 import unittest
 from contextlib import contextmanager
+from collections import OrderedDict
 import sys
 import time
 import errno
 import signal
 import psutil
 import os
+import copy
 
 from StringIO import StringIO
 from mock import patch, mock_open
@@ -28,6 +30,141 @@ def capture_output():
         yield sys.stdout, sys.stderr
     finally:
         sys.stdout, sys.stderr = old_out, old_err
+
+
+class MockDbi(object):
+    def __init__(self, *args, **kwargs):
+        if 'data' in kwargs.keys() and kwargs['data']:
+            self.data = kwargs['data']
+        else:
+            self.data = [(('the_root',),)]
+        if 'descr' in kwargs.keys():
+            self.descr = kwargs['descr']
+        else :
+            self.descr = []
+        self.con = self.Connection()
+        self._curs = None
+        self.count = {'cursor': 0,
+                      'commit': 0,
+                      'get_positional_bind_string': 0}
+
+    def get_positional_bind_string(self, *args, **kwargs):
+        self.count['get_positional_bind_string'] += 1
+
+    def getCount(self, attrib):
+        if attrib in self.count.keys():
+            return self.count[attrib]
+        try:
+            return self.con.getCount(attrib)
+        except:
+            return self._curs.getCount(attrib)
+
+    def cursor(self):
+        self._curs = self.Cursor(self.data, self.descr)
+        self.count['cursor'] += 1
+        return self._curs
+
+    def setThrow(self, value):
+        self.con.throw = value
+
+    class Connection(object):
+        def __init__(self):
+            self.throw = False
+            self.count = {'ping': 0}
+
+        def getCount(self, attrib):
+            return self.count[attrib]
+
+        def ping(self):
+            self.count['ping'] += 1
+            if self.throw:
+                raise Exception()
+            return True
+
+    class Cursor(object):
+        def __init__(self, data=[], descr=[]):
+            self.data = data
+            self.current_data = None
+            self.select = False
+            self.data.reverse()
+            self.description = None
+            self.descr_data = descr
+            self.descr_data.reverse()
+            self.count = {'execute': 0,
+                          'fetchall': 0,
+                          'prepare': 0,
+                          'executemany': 0}
+            self._idx = 0
+
+        def next(self):
+            if self._idx < len(self.current_data):
+                self._idx += 1
+                return self.current_data[self._idx - 1]
+            raise StopIteration
+
+        def __iter__(self):
+            return self
+
+        def getCount(self, attrib):
+            return self.count[attrib]
+
+        def setData(self, data):
+            self.data = data
+            self.data.reverse()
+
+        def execute(self,*args, **kwargs):
+            self._idx = 0
+            if args:
+                if isinstance(args[0], str):
+                    if args[0].lower().startswith('select'):
+                        try:
+                            self.description = self.descr_data.pop()
+                        except:
+                            self.description = None
+                        try:
+                            self.current_data = self.data.pop()
+                        except:
+                            self.current_data = None
+            elif self.select:
+                try:
+                    self.description = self.descr_data.pop()
+                except:
+                    self.description = None
+                try:
+                    self.current_data = self.data.pop()
+                except:
+                    self.current_data = None
+            self.count['execute'] += 1
+
+        def fetchall(self):
+            #print "DATA",self.data
+            self.count['fetchall'] += 1
+            if self.current_data:
+                return self.current_data
+            return None
+
+        def prepare(self, *args, **kwargs):
+            self.select = False
+            if args:
+                if isinstance(args[0], str):
+                    if args[0].lower().startswith('select'):
+                        self.select = True
+            self.count['prepare'] += 1
+
+        def executemany(self, *args, **kwargs):
+            self._idx = 0
+            self.select = False
+            self.count['executemany'] += 1
+
+    def setReturn(self, data):
+        self.data = data
+
+    def setDescription(self, descr):
+        self.descr = descr
+
+    def commit(self):
+        self.count['commit'] += 1
+
 
 class TestXmlslurper(unittest.TestCase):
     tablelist = ("Astrometric_Instruments",
@@ -2501,7 +2638,37 @@ class TestMiscutils(unittest.TestCase):
         with patch('despymisc.miscutils.os.makedirs', side_effect=self.TestError()) as md:
             mut.coremakedirs('here2')
 
-    #def test_parse_fullname(self):
+    def test_parse_fullname(self):
+        name = 'file.ext'
+        self.assertEqual(mut.parse_fullname(name), name)
+        self.assertEqual(mut.parse_fullname('/the/path/' + name + '.fz'), name)
+        hduname = name + '[0]'
+        self.assertEqual(mut.parse_fullname(hduname), name)
+        self.assertEqual(mut.parse_fullname(hduname, mut.CU_PARSE_HDU), '0')
+        fname = name + '.fz'
+        self.assertEqual(mut.parse_fullname(fname, mut.CU_PARSE_BASENAME), fname)
+        self.assertEqual(mut.parse_fullname(fname, mut.CU_PARSE_COMPRESSION), '.fz')
+        ret = mut.parse_fullname(fname, mut.CU_PARSE_COMPRESSION | mut.CU_PARSE_FILENAME)
+        self.assertEqual(len(ret), 2)
+        self.assertEqual(ret[0], name)
+        self.assertEqual(ret[1], '.fz')
+        fname = name + '.tz'
+        os.environ['MISCUTILS_DEBUG'] = '5'
+        with capture_output() as (out, err):
+            self.assertIsNone(mut.parse_fullname(fname, mut.CU_PARSE_COMPRESSION))
+            output = out.getvalue().strip()
+            self.assertTrue('Not valid' in output)
+        fname = 'file.fz'
+        with capture_output() as (out, err):
+            self.assertIsNone(mut.parse_fullname(fname, mut.CU_PARSE_COMPRESSION))
+            output = out.getvalue().strip()
+            self.assertTrue('match pattern' in output)
+        os.environ['MISCUTILS_DEBUG'] = '0'
+        self.assertIsNone(mut.parse_fullname(name, mut.CU_PARSE_PATH))
+        pth = '/the/file/path/'
+        ret = mut.parse_fullname(pth + name + '.fz', mut.CU_PARSE_PATH | mut.CU_PARSE_COMPRESSION | mut.CU_PARSE_FILENAME)
+        self.assertEqual(len(ret), 3)
+        self.assertEqual(ret[0], pth[:-1])
 
     def test_convertBool(self):
         self.assertTrue(mut.convertBool('True'))
@@ -2550,10 +2717,9 @@ class TestMiscutils(unittest.TestCase):
             mut.pretty_print_dict(None, out_file='my.out')
         with self.assertRaises(AssertionError):
             mut.pretty_print_dict([])
-        #with capture_output() as (out, err):
         data = {'item1': [1,3,5],
                 'item2': 'abc',
-                'item3': {'item4': True, 'item5': 7}}
+                'item3': {'item4': True, 'item5': 7, 'item6': None}}
         with capture_output() as (out, err):
             mut.pretty_print_dict(data, indent=4)
             output = out.getvalue().strip()
@@ -2584,14 +2750,94 @@ class TestMiscutils(unittest.TestCase):
         self.assertEqual(len(info.keys()), 1)
         self.assertTrue(info['item3'])
 
-#def test_dynamically_load_class(self):
-#def test_updateOrderedDict(self):
-#def test_get_list_directories(self):
-#def test_elapsed_time(self):
-#def test_query2dict_of_lists(self):
-#def test_create_logger(self):
+    def test_dynamically_load_class(self):
+        import psutil as put
+        proc = mut.dynamically_load_class('psutil.Process')
+        with self.assertRaises(put.NoSuchProcess):
+            proc(0)
 
+    def test_updateOrderedDict(self):
+        od = OrderedDict()
+        od['item1'] = 1234
+        mut.updateOrderedDict(od, {'item2': 456, 'item3': 789})
+        self.assertEqual(len(od.keys()), 3)
 
+        od = OrderedDict()
+        od1 = OrderedDict()
+        od1['item2'] = 123
+        od['item1'] = od1
+        od2 = OrderedDict()
+        od2['item1'] = 456
+
+        with self.assertRaises(TypeError):
+            mut.updateOrderedDict(od2, od)
+
+        od = OrderedDict()
+        od1 = OrderedDict()
+        od1['item2'] = 123
+        od['item1'] = od1
+        od2 = OrderedDict()
+        od2['item3'] = 456
+        mut.updateOrderedDict(od2, od)
+        self.assertEqual(len(od2), 2)
+        self.assertTrue('item1' in od2.keys())
+
+        od = OrderedDict()
+        od1 = OrderedDict()
+        od2 = OrderedDict()
+        od3 = OrderedDict()
+        od4 = OrderedDict()
+        od4['item4'] = 111
+        od3['item3'] = od4
+        od2['item2'] = od3
+        od2['item2.5'] = 555
+        od1['item1'] = od2
+        od1['item'] = 333
+
+        od = copy.deepcopy(od1)
+
+        del od['item']
+        del od['item1']['item2.5']
+        od['item1']['item2']['item3']['item4'] = 999
+
+        self.assertNotEqual(od, od1)
+        mut.updateOrderedDict(od, od1)
+        self.assertEqual(od, od1)
+
+    def test_get_list_directories(self):
+        flist = ['/this/is/the/file/path.p', '/this/is/another/path.f']
+        ret = mut.get_list_directories(flist)
+        self.assertEqual(len(ret), 5)
+        for item in ret:
+            self.assertTrue(item.startswith('/this'))
+        for i in range(1, len(ret)):
+            self.assertTrue(ret[i].startswith('/this/is'))
+
+    def test_elapsed_time(self):
+        t1 = time.time()
+        time.sleep(2)
+        ret = mut.elapsed_time(t1)
+        secs = float(ret.split()[1].replace('s',''))
+        self.assertGreaterEqual(secs, 2.0)
+        self.assertAlmostEqual(secs, 2.0, delta=0.05)
+
+    def test_query2dict_of_lists(self):
+        results = [(('file.1', 12345), ('file.2', 56789), ('file.3', 0))]
+        descr = [[['filename', 0],
+                  ['size', 0]]]
+        myMock = MockDbi(data=results, descr=descr)
+        ret = mut.query2dict_of_lists("select filename, size from desfile", myMock)
+        self.assertEqual(len(ret), 2)
+        self.assertEqual(len(ret['filename']), 3)
+        self.assertEqual(ret['filename'][0], 'file.1')
+        self.assertEqual(ret['size'][2], 0)
+
+    def test_create_logger(self):
+        import logging
+        lm = mut.create_logger(logging.INFO, 'mylogger')
+        self.assertTrue(isinstance(lm, logging.Logger))
+        self.assertEqual(lm.name, 'mylogger')
+        self.assertEqual(lm.level, logging.INFO)
 
 if __name__ == '__main__':
     unittest.main()
