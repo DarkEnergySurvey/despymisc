@@ -2647,7 +2647,10 @@ class TestMiscutils(unittest.TestCase):
         self.assertEqual(mut.parse_fullname(hduname, mut.CU_PARSE_HDU), '0')
         fname = name + '.fz'
         self.assertEqual(mut.parse_fullname(fname, mut.CU_PARSE_BASENAME), fname)
+        self.assertEqual(mut.parse_fullname(name, mut.CU_PARSE_BASENAME), name)
+
         self.assertEqual(mut.parse_fullname(fname, mut.CU_PARSE_COMPRESSION), '.fz')
+        self.assertIsNone(mut.parse_fullname(name + '.ff[0]', mut.CU_PARSE_COMPRESSION))
         ret = mut.parse_fullname(fname, mut.CU_PARSE_COMPRESSION | mut.CU_PARSE_FILENAME)
         self.assertEqual(len(ret), 2)
         self.assertEqual(ret[0], name)
@@ -2669,6 +2672,7 @@ class TestMiscutils(unittest.TestCase):
         ret = mut.parse_fullname(pth + name + '.fz', mut.CU_PARSE_PATH | mut.CU_PARSE_COMPRESSION | mut.CU_PARSE_FILENAME)
         self.assertEqual(len(ret), 3)
         self.assertEqual(ret[0], pth[:-1])
+        self.assertIsNone(mut.parse_fullname(name, 100))
 
     def test_convertBool(self):
         self.assertTrue(mut.convertBool('True'))
@@ -2733,6 +2737,7 @@ class TestMiscutils(unittest.TestCase):
             self.assertTrue(output.startswith('item1'))
             self.assertTrue('item2 = abc' in output)
             self.assertTrue('    item4 = True' in output)
+        self.assertIsNone(mut._recurs_pretty_print_dict(None, None, False, '', ''))
 
     def test_get_config_vals(self):
         extra = {'item1': 5,
@@ -2820,6 +2825,10 @@ class TestMiscutils(unittest.TestCase):
         secs = float(ret.split()[1].replace('s',''))
         self.assertGreaterEqual(secs, 2.0)
         self.assertAlmostEqual(secs, 2.0, delta=0.05)
+        with capture_output() as (out, err):
+            ret = mut.elapsed_time(t1, True)
+            output = out.getvalue().strip()
+            self.assertTrue('Elapsed time' in output)
 
     def test_query2dict_of_lists(self):
         results = [(('file.1', 12345), ('file.2', 56789), ('file.3', 0))]
