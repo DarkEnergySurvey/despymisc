@@ -189,6 +189,8 @@ CU_PARSE_FILENAME = 2
 CU_PARSE_EXTENSION = 1   # deprecating use CU_PARSE_COMPRESSION
 CU_PARSE_COMPRESSION = 1
 CU_PARSE_BASENAME = 0
+VALID_COMPRESS_EXT = ['fz', 'gz']
+
 def parse_fullname(fullname, retmask=CU_PARSE_FILENAME):
     """ Parse the given file name, returning the requested parts
 
@@ -223,7 +225,6 @@ def parse_fullname(fullname, retmask=CU_PARSE_FILENAME):
     fwdebug(3, 'MISCUTILS_DEBUG', "fullname = %s" % fullname)
     fwdebug(3, 'MISCUTILS_DEBUG', "retmask = %s" % retmask)
 
-    VALID_COMPRESS_EXT = ['fz', 'gz']
     hdu = None
     compress_ext = None
     filename = None
