@@ -2269,10 +2269,12 @@ class TestSubprocess4(unittest.TestCase):
             self.assertEqual(po.wait4(), 1)
 
 class TestScamputil(unittest.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         makeAheadFile()
 
-    def tearDown(self):
+    @classmethod
+    def tearDownClass(cls):
         os.unlink(FILENAME)
 
     def test_all_good_headers(self):
@@ -2570,8 +2572,9 @@ class TestMiscutils(unittest.TestCase):
         def __init__(self, val):
             self.use_db = val
 
-    def setUp(self):
-        self.tch = 'TEST_CHECK_LVL'
+    @classmethod
+    def setUpClass(cls):
+        cls.tch = 'TEST_CHECK_LVL'
 
     def test_fwdebug(self):
         msg = 'My message'
