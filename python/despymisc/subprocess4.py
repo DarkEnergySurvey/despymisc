@@ -23,7 +23,7 @@ class Popen(subprocess.Popen):
     """
     def __init__(self, args, **kwargs):
         self.rusage = None
-        subprocess.Popen.__init__(self, args, **kwargs)
+        super().__init__(args, **kwargs)
 
     def wait4(self):
         """ Wait for child process to terminate.
@@ -51,9 +51,9 @@ class Popen(subprocess.Popen):
                 try:
                     _ = psutil.Process(self.pid)
                 except psutil.NoSuchProcess:
-                    print 'Process finished but wait4() returned a mismatched pid'
+                    print('Process finished but wait4() returned a mismatched pid')
                     self.returncode = 1
 
         if self.returncode == -signal.SIGSEGV:
-            print "SEGMENTATION FAULT"
+            print("SEGMENTATION FAULT")
         return self.returncode

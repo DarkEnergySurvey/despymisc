@@ -1,5 +1,6 @@
-#!/usr/bin/env python
-# A very simple script to remove duplicates from a list.
+#!/usr/bin/env python3
+""" A very simple script to remove duplicates from a list.
+"""
 
 import sys
 
@@ -18,7 +19,7 @@ def main():
         vals = line.split()
         ID = vals[col]
         if ID not in IDs:
-            print line.rstrip()
+            print(line.rstrip())
             IDs.append(ID)
 
 if __name__ == "__main__":

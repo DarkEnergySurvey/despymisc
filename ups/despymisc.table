@@ -1,3 +1,6 @@
-setupRequired(dateutil 1.5+6)
+setupRequired(dateutil)
+setupRequired(psutil)
+setupRequired(despyServiceAccess)
+
 envPrepend(PATH, ${PRODUCT_DIR}/bin)
 envPrepend(PYTHONPATH, ${PRODUCT_DIR}/python)

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # $Id: miscutils.py 41806 2016-05-03 16:03:59Z felipe $
 # $Rev:: 41806                            $:  # Revision of last commit.
 # $LastChangedBy:: felipe                 $:  # Author of last commit.
@@ -12,8 +11,8 @@ import sys
 import datetime
 import inspect
 import errno
-from collections import Mapping
 import logging
+import collections
 
 
 #######################################################################
@@ -79,8 +78,8 @@ def fwdebug_check(msglvl, envdbgvar):
         dbglvl = os.environ[envdbgvar]
     elif '_' in envdbgvar:
         prefix = envdbgvar.split('_')[0]
-        if '%s_DEBUG' % prefix in os.environ:
-            dbglvl = os.environ['%s_DEBUG' % prefix]
+        if f'{prefix}_DEBUG' in os.environ:
+            dbglvl = os.environ[f'{prefix}_DEBUG']
 
     return int(dbglvl) >= int(msglvl)
 
@@ -98,8 +97,7 @@ def fwdebug_print(msgstr, msgprefix=''):
             Text to prepend to the output line. Default is an empty string
 
     """
-    print "%s%s - %s - %s" % (msgprefix, datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S"),
-                              inspect.stack()[1][3], msgstr)
+    print(f"{msgprefix}{datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')} - {inspect.stack()[1][3]} - {msgstr}")
 
 #######################################################################
 def fwdie(msg, exitcode, depth=1):
@@ -119,7 +117,7 @@ def fwdie(msg, exitcode, depth=1):
     """
     frame = inspect.stack()[depth]
     fle = os.path.basename(frame[1])
-    print "\n\n%s:%s:%s: %s" % (fle, frame[3], frame[2], msg)
+    print(f"\n\n{fle}:{frame[3]}:{frame[2]}: {msg}")
 
     sys.exit(exitcode)
 
@@ -146,17 +144,13 @@ def fwsplit(fullstr, delim=','):
         fwsplit('1,2,4:6') returns ['1', '2', '4', '5', '6']
 
     """
-    #fullstr = re.sub('[()]', '', fullstr) # delete parens if exist
-    fullstr = fullstr.replace('(', '')
-    fullstr = fullstr.replace(')', '')
-    fullstr = fullstr.replace('[', '')
-    fullstr = fullstr.replace(']', '')
+    fullstr = re.sub('[()]', '', fullstr) # delete parens if exist
     items = []
     for item in [x.strip() for x in fullstr.split(delim)]:
         m = re.match(r"(\d+):(\d+)", item)
         if m:
             items.extend(map(str, range(int(m.group(1)),
-                                        int(m.group(2))+1)))
+                                        int(m.group(2)) + 1)))
         else:
             items.append(item)
     return items
@@ -179,7 +173,7 @@ def coremakedirs(thedir):
             if exc.errno == errno.EEXIST:
                 pass
             else:
-                print "Error: problems making directory: %s" % exc
+                print(f"Error: problems making directory: {exc}")
                 raise
 
 #######################################################################
@@ -192,7 +186,7 @@ CU_PARSE_BASENAME = 0
 VALID_COMPRESS_EXT = ['fz', 'gz']
 
 def parse_fullname(fullname, retmask=CU_PARSE_FILENAME):
-    """ Parse the given file name, returning the requested parts
+    """" Parse the given file name, returning the requested parts
 
         Parameters
         ----------
@@ -222,8 +216,8 @@ def parse_fullname(fullname, retmask=CU_PARSE_FILENAME):
         A single string if only one item was requested, or a list of the requested
         parts if retmask is an or'd value. None will be returned if there is no result.
     """
-    fwdebug(3, 'MISCUTILS_DEBUG', "fullname = %s" % fullname)
-    fwdebug(3, 'MISCUTILS_DEBUG', "retmask = %s" % retmask)
+    fwdebug(3, 'MISCUTILS_DEBUG', f"fullname = {fullname}")
+    fwdebug(3, 'MISCUTILS_DEBUG', f"retmask = {retmask}")
 
     hdu = None
     compress_ext = None
@@ -254,19 +248,19 @@ def parse_fullname(fullname, retmask=CU_PARSE_FILENAME):
             retval.append(path)
 
     filename = os.path.basename(fullname)
-    fwdebug(3, 'MISCUTILS_DEBUG', "filename = %s" % filename)
+    fwdebug(3, f'MISCUTILS_DEBUG', f"filename = {filename}")
 
     # check for compression extension on files, assumes extension + compression extension
     m = re.search(r'^(\S+\.\S+)\.([^.]+)$', filename)
     if m:
-        fwdebug(3, 'MISCUTILS_DEBUG', "m.group(2)=%s" % m.group(2))
-        fwdebug(3, 'MISCUTILS_DEBUG', "VALID_COMPRESS_EXT=%s" % VALID_COMPRESS_EXT)
+        fwdebug(3, 'MISCUTILS_DEBUG', f"m.group(2)={m.group(2)}")
+        fwdebug(3, 'MISCUTILS_DEBUG', f"VALID_COMPRESS_EXT={VALID_COMPRESS_EXT}")
         if m.group(2) in VALID_COMPRESS_EXT:
             filename = m.group(1)
-            compress_ext = '.'+m.group(2)
+            compress_ext = '.' + m.group(2)
         else:
             if retmask & CU_PARSE_COMPRESSION:
-                fwdebug(3, 'MISCUTILS_DEBUG', "Not valid compressions extension (%s)  Assuming non-compressed file." % m.group(2))
+                fwdebug(3, 'MISCUTILS_DEBUG', f"Not valid compressions extension ({m.group(2)})  Assuming non-compressed file.")
             compress_ext = None
     else:
         fwdebug(3, 'MISCUTILS_DEBUG', "Didn't match pattern for fits file with compress extension")
@@ -276,7 +270,7 @@ def parse_fullname(fullname, retmask=CU_PARSE_FILENAME):
         retval = filename
         if compress_ext is not None:
             retval += compress_ext
-        fwdebug(3, 'MISCUTILS_DEBUG', "filename = %s, compress_ext = %s, retval = %s" % (filename, compress_ext, retval))
+        fwdebug(3, 'MISCUTILS_DEBUG', f"filename = {filename}, compress_ext = {compress_ext}, retval = {retval}")
     else:
         if retmask & CU_PARSE_FILENAME:
             retval.append(filename)
@@ -329,7 +323,7 @@ def convertBool(var):
         elif tvar == bool:
             newvar = var
         else:
-            raise Exception("Type not handled (var, type): %s, %s" % (var, type(var)))
+            raise Exception(f"Type not handled (var, type): {var}, {type(var)}")
     else:
         newvar = False
     #print "After:", newvar, type(newvar)
@@ -435,7 +429,7 @@ def checkTrue(key, arg, default=True):
     if args_val is not None:
         ret_val = args_val
     else:
-        env_key = 'DESDM_%s' % key.upper()
+        env_key = f'DESDM_{key.upper()}'
         if env_key in os.environ and not convertBool(os.environ[env_key]):
             ret_val = False
 
@@ -482,12 +476,12 @@ def _recurs_pretty_print_dict(the_dict, out_file, sortit, inc_indent, curr_inden
 
         for key, value in dictitems:
             if isinstance(value, dict):
-                print >> out_file, ' ' * curr_indent + str(key)
+                print(' ' * curr_indent + str(key), file=out_file)
                 _recurs_pretty_print_dict(value, out_file, sortit, inc_indent,
                                           curr_indent + inc_indent)
             else:
-                print >> out_file, ' ' * curr_indent + str(key) + \
-                        " = " + str(value)
+                print(' ' * curr_indent + str(key) + \
+                        " = " + str(value), file=out_file)
 
 
 #######################################################################
@@ -523,10 +517,10 @@ def get_config_vals(extra_info, config, keylist):
             info[k] = config[k]
         elif stat.lower() == 'req':
             fwdebug(0, 'MISCUTILS_DEBUG', '******************************')
-            fwdebug(0, 'MISCUTILS_DEBUG', 'keylist = %s' % keylist)
-            fwdebug(0, 'MISCUTILS_DEBUG', 'extra_info = %s' % extra_info)
-            fwdebug(0, 'MISCUTILS_DEBUG', 'config = %s' % config)
-            fwdie('Error: Could not find required key (%s)' % k, 1, 2)
+            fwdebug(0, 'MISCUTILS_DEBUG', f'keylist = {keylist}')
+            fwdebug(0, 'MISCUTILS_DEBUG', f'extra_info = {extra_info}')
+            fwdebug(0, 'MISCUTILS_DEBUG', f'config = {config}')
+            fwdie(f'Error: Could not find required key ({k})', 1, 2)
     return info
 
 #######################################################################
@@ -543,12 +537,12 @@ def dynamically_load_class(class_desc):
         Class of the requested type
     """
 
-    fwdebug(3, 'MISCUTILS_DEBUG', "class_desc = %s" % class_desc)
+    fwdebug(3, 'MISCUTILS_DEBUG', f"class_desc = {class_desc}")
     modparts = class_desc.split('.')
     fromname = '.'.join(modparts[0:-1])
     importname = modparts[-1]
-    fwdebug(3, 'MISCUTILS_DEBUG', "\tfromname = %s" % fromname)
-    fwdebug(3, 'MISCUTILS_DEBUG', "\timportname = %s" % importname)
+    fwdebug(3, 'MISCUTILS_DEBUG', f"\tfromname = {fromname}")
+    fwdebug(3, 'MISCUTILS_DEBUG', f"\timportname = {importname}")
     mod = __import__(fromname, fromlist=[importname])
     dynclass = getattr(mod, importname)
     return dynclass
@@ -569,18 +563,24 @@ def updateOrderedDict(d, u):
             The dictionary containing the new key-value pairs for d.
     """
 
-    for k, v in u.iteritems():
-        if isinstance(v, Mapping):
+    for k, v in u.items():
+        if isinstance(v, collections.Mapping):
             if d.__contains__(k):
                 d2 = d.get(k)
-                if isinstance(d2, Mapping):
+                if isinstance(d2, collections.Mapping):
                     updateOrderedDict(d2, v)
                 else:
                     raise TypeError("Expected dictionary type")
             else:
-                d[k] = copy.deepcopy(v)
+                try:
+                    d[k] = copy.deepcopy(v)
+                except TypeError:
+                    d[k] = copy.copy(v)
         else:
-            d[k] = copy.deepcopy(v)
+            try:
+                d[k] = copy.deepcopy(v)
+            except TypeError:
+                d[k] = copy.copy(v)
 
 #######################################################################
 def get_list_directories(filelist):
@@ -629,9 +629,9 @@ def elapsed_time(t1, verbose=False):
     """
     import time
     t2 = time.time()
-    stime = "%dm %2.2fs" % (int((t2 - t1) / 60.), (t2 - t1) - 60 * int((t2 - t1) / 60.))
+    stime = f"{int((t2 - t1) / 60.):d}m {(t2 - t1) - 60 * int((t2 - t1) / 60.):2.2f}s"
     if verbose:
-        print "# Elapsed time: %s" % stime
+        print(f"# Elapsed time: {stime}")
     return stime
 
 def query2dict_of_lists(query, dbhandle):
