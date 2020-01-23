@@ -2428,6 +2428,9 @@ class Test_create_special_metadata(unittest.TestCase):
         args = [0.5, 1, 0, 0, 1, 1, 1]
         self.assertEqual(csm.fwhm_arcsec(args), 0.5)
 
+        args = [0.5, 0, 0, 0, 1, 1, 1]
+        self.assertEqual(csm.fwhm_arcsec(args), 0.5)
+
 class TestHttpRequest(unittest.TestCase):
     def test_get_credentials(self):
         with capture_output() as (out, err):
