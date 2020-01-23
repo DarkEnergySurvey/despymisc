@@ -69,9 +69,8 @@ def split_ahead_by_ccd(infile, outfile, ccd_list):
     # Step through the list of CCDs and write each .ahead:HDU-like piece.    print len(head_set)
     fout = open(outfile, 'w')
     for ccd in ccd_list:
-        if ccd in head_set:
-            tmp_header = head_set[ccd]
-            for hline in tmp_header:
-                fout.write(hline + "\n")
+        tmp_header = head_set[ccd]
+        for hline in tmp_header:
+            fout.write(hline + "\n")
     fout.close()
     return True
