@@ -91,11 +91,11 @@ def convert_dec_to_deg(dec):
 
 ######################################################################
 def fwhm_arcsec(farglist):
-#
-#   This is derived from "calc_pixscale" in runSExtractor.c.  This python version is different
-#   from the original c code in that it checks to see if cd1_1 and cd2_2 are both non-zero, otherwise
-#   it skips the calculation of rho_a and rho_b to avoid ZeroDivisionError.
-#
+    """
+    This is derived from "calc_pixscale" in runSExtractor.c.  This python version is different
+    from the original c code in that it checks to see if cd1_1 and cd2_2 are both non-zero, otherwise
+    it skips the calculation of rho_a and rho_b to avoid ZeroDivisionError.
+    """
     # check number of arguments
     nargs = len(farglist)
     if nargs != 7:

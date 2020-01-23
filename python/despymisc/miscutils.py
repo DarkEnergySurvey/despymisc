@@ -8,6 +8,7 @@ import re
 import os
 import copy
 import sys
+import time
 import datetime
 import inspect
 import errno
@@ -627,7 +628,6 @@ def elapsed_time(t1, verbose=False):
         -------
         str, representing the ellapsed time since t1.
     """
-    import time
     t2 = time.time()
     stime = f"{int((t2 - t1) / 60.):d}m {(t2 - t1) - 60 * int((t2 - t1) / 60.):2.2f}s"
     if verbose:
