@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 import unittest
 from contextlib import contextmanager
 from collections import OrderedDict
@@ -6,12 +6,13 @@ import sys
 import time
 import errno
 import signal
-import psutil
 import os
 import copy
+from io import StringIO
 
-from StringIO import StringIO
+import psutil
 from mock import patch, mock_open
+
 from despymisc.xmlslurp import Xmlslurper
 import despymisc.subprocess4 as sub4
 import despymisc.scamputil as scu
@@ -2049,7 +2050,7 @@ END
     f.close()
 
 
-class MockDbi(object):
+class MockDbi:
     def __init__(self, *args, **kwargs):
         if 'data' in kwargs.keys() and kwargs['data']:
             self.data = kwargs['data']
@@ -2057,7 +2058,7 @@ class MockDbi(object):
             self.data = [(('the_root',),)]
         if 'descr' in kwargs.keys():
             self.descr = kwargs['descr']
-        else :
+        else:
             self.descr = []
         self.con = self.Connection()
         self._curs = None
@@ -2084,7 +2085,7 @@ class MockDbi(object):
     def setThrow(self, value):
         self.con.throw = value
 
-    class Connection(object):
+    class Connection:
         def __init__(self):
             self.throw = False
             self.count = {'ping': 0}
@@ -2098,7 +2099,7 @@ class MockDbi(object):
                 raise Exception()
             return True
 
-    class Cursor(object):
+    class Cursor:
         def __init__(self, data=[], descr=[]):
             self.data = data
             self.current_data = None
@@ -2129,7 +2130,7 @@ class MockDbi(object):
             self.data = data
             self.data.reverse()
 
-        def execute(self,*args, **kwargs):
+        def execute(self, *args, **kwargs):
             self._idx = 0
             if args:
                 if isinstance(args[0], str):
@@ -2211,7 +2212,7 @@ class TestXmlslurper(unittest.TestCase):
 </main>
 """
     def test_all(self):
-        with patch('despymisc.xmlslurp.open', mock_open(read_data=self.xmldata)) as mo:
+        with patch('despymisc.xmlslurp.open', mock_open(read_data=self.xmldata.encode('utf-8'))) as mo:
             data = Xmlslurper('filename', self.tablelist)
             self.assertTrue('FGroups' in data.gettables().keys())
             self.assertTrue(len(data.gettables().keys()), 1)
@@ -2226,7 +2227,7 @@ class TestSubprocess4(unittest.TestCase):
             self.errno = errno.ECHILD
 
     def test_init(self):
-        _ = sub4.Popen(['ls','-1'])
+        _ = sub4.Popen(['ls', '-1'])
 
     def test_wait(self):
         start = time.time()
@@ -2246,7 +2247,7 @@ class TestSubprocess4(unittest.TestCase):
                 po.wait4()
 
     def test_fastReturn(self):
-        po = sub4.Popen(['ls','-1'])
+        po = sub4.Popen(['ls', '-1'])
         time.sleep(3)
         po.returncode = 0
         self.assertIsNotNone(po.returncode)
@@ -2254,14 +2255,14 @@ class TestSubprocess4(unittest.TestCase):
 
     def test_segfault(self):
         with capture_output() as (out, err):
-            po = sub4.Popen(['ls','-1'])
+            po = sub4.Popen(['ls', '-1'])
             po.returncode = -signal.SIGSEGV
             self.assertTrue(-signal.SIGSEGV == po.wait4())
             output = out.getvalue().strip()
             self.assertTrue('SEGMENTATION' in output)
 
     def test_mismatchPID(self):
-        with patch('despymisc.subprocess4.os.wait4', return_value=(0,1,{})) as osw:
+        with patch('despymisc.subprocess4.os.wait4', return_value=(0, 1, {})) as osw:
             po = sub4.Popen(['ls'])
             pu = psutil.Process(po.pid)
             pu.terminate()
@@ -2306,7 +2307,7 @@ class TestScamputil(unittest.TestCase):
 
     def test_missing_ccd(self):
         output = 'test.junk'
-        ccds = [1,2,3]
+        ccds = [1, 2, 3]
         with capture_output() as (out, err):
             self.assertFalse(scu.split_ahead_by_ccd(FILENAME, output, ccds))
             outp = out.getvalue().strip()
@@ -2384,16 +2385,18 @@ class Test_create_special_metadata(unittest.TestCase):
         self.assertEqual(csm.fwhm_arcsec(args), 0.5)
 
         args = [0.5, 1, 1, 1, 1, 1, 0]
-        self.assertEqual(csm.fwhm_arcsec(args), 0.25)
+        self.assertAlmostEqual(csm.fwhm_arcsec(args), 2545.5844, 4)
 
         args = [0.5, 1, 1, 1, 1, 0.5, 1]
         self.assertEqual(csm.fwhm_arcsec(args), 0.375)
 
         args = [0.5, 0, 2, 1, 1, 1, 0]
-        self.assertEqual(csm.fwhm_arcsec(args), 0.25)
+        with self.assertRaises(KeyError):
+            csm.fwhm_arcsec(args)
 
         args = [0.5, 0, 0, 1, 1, 1, 0]
-        self.assertEqual(csm.fwhm_arcsec(args), 0.25)
+        with self.assertRaises(KeyError):
+            csm.fwhm_arcsec(args)
 
         args = [0.5, 0, 0, 1, 1, 0, 0]
         with self.assertRaises(KeyError):
@@ -2409,13 +2412,15 @@ class Test_create_special_metadata(unittest.TestCase):
             csm.fwhm_arcsec([])
 
         args = [0.5, 3, 1, -1, -1, 1, 0]
-        self.assertEqual(csm.fwhm_arcsec(args), 0.25)
+        self.assertAlmostEqual(csm.fwhm_arcsec(args), 4232.0538, 4)
 
         args = [0.5, 3, 1, -1, 0, 1, 0]
-        self.assertEqual(csm.fwhm_arcsec(args), 0.25)
+        with self.assertRaises(KeyError):
+            csm.fwhm_arcsec(args)
 
         args = [0.5, 3, 1, 0, 0, 1, 0]
-        self.assertEqual(csm.fwhm_arcsec(args), 0.25)
+        with self.assertRaises(KeyError):
+            csm.fwhm_arcsec(args)
 
         args = [2000, 0.5, 1, 1, 1, 10000, 100]
         self.assertAlmostEqual(csm.fwhm_arcsec(args), 9235342.9410, 4)
@@ -2459,10 +2464,10 @@ URL     =   data.somewhere.net
         req = hrq.Request(auth)
         self.assertEqual(auth, req.auth)
 
-    @patch('despymisc.http_requests.urllib2.Request')
+    @patch('despymisc.http_requests.request')
     def test_Request_POST(self, prq):
         data = 'hello=5'
-        url = 'data.somewhere.net'
+        url = 'http://data.somewhere.net'
         with self.assertRaises(ValueError):
             req = hrq.Request([])
             req.POST(None, data)
@@ -2471,74 +2476,74 @@ URL     =   data.somewhere.net
             req = hrq.Request([])
             req.POST(None, {})
 
-        with patch('despymisc.http_requests.urllib2.urlopen', side_effect=Exception("Bad call")) as ptch:
+        with patch('despymisc.http_requests.request.urlopen', side_effect=Exception("Bad call")) as ptch:
             req = hrq.Request([])
             req.POST(url, {})
             self.assertTrue(req.error_status[0])
             self.assertTrue('Bad call' in req.error_status[1])
 
-        with patch('despymisc.http_requests.urllib2.urlopen', return_value='rval') as ptch:
+        with patch('despymisc.http_requests.request.urlopen', return_value='rval') as ptch:
             req = hrq.Request(['uname', 'pwd'])
             req.POST(url, {'request':'hello'})
             self.assertFalse(req.error_status[0])
             self.assertEqual(req.response, 'rval')
 
-    @patch('despymisc.http_requests.urllib2.Request')
+    @patch('despymisc.http_requests.request')
     def test_Request_get_read(self, prq):
-        url = 'data.somewhere.net'
+        url = 'http://data.somewhere.net'
 
         with self.assertRaises(ValueError):
             req = hrq.Request(['uname', 'pwd'])
             req.get_read(None)
 
-        with patch('despymisc.http_requests.urllib2.urlopen', side_effect=Exception("Bad call")) as ptch:
+        with patch('despymisc.http_requests.request.urlopen', side_effect=Exception("Bad call")) as ptch:
             req = hrq.Request(['uname', 'pwd'])
             req.get_read(url)
             self.assertTrue(req.error_status[0])
 
-        with patch('despymisc.http_requests.urllib2.urlopen', side_effect=Exception("Bad call")) as ptch:
+        with patch('despymisc.http_requests.request.urlopen', side_effect=Exception("Bad call")) as ptch:
             req = hrq.Request([])
             req.get_read(url)
             self.assertTrue(req.error_status[0])
 
-        with patch('despymisc.http_requests.urllib2.urlopen') as pop:
+        with patch('despymisc.http_requests.request.urlopen') as pop:
             req = hrq.Request(['uname', 'pwd'])
             resp = req.get_read(url)
             self.assertFalse(req.error_status[0])
             self.assertTrue('urlopen().read()' in str(resp))
 
-    @patch('despymisc.http_requests.urllib2.Request')
+    @patch('despymisc.http_requests.request')
     def test_Request_download_file(self, prq):
         output = 'test.output'
-        with patch('despymisc.http_requests.urllib2.urlopen', mock_open(read_data='return data')) as mo:
+        with patch('despymisc.http_requests.request.urlopen', mock_open(read_data=b'return data')) as mo:
             req = hrq.Request(['uname', 'pwd'])
-            req.download_file('data.somewhere.net', output)
+            req.download_file('http://data.somewhere.net', output)
             f = open(output, 'r')
             self.assertTrue('return data' in f.readline())
             os.unlink(output)
 
-    @patch('despymisc.http_requests.urllib2.Request')
+    @patch('despymisc.http_requests.request')
     def test_Request_GET(self, prq):
-        url = 'data.somewhere.net'
+        url = 'http://data.somewhere.net'
         with self.assertRaises(ValueError):
             req = hrq.Request(['uname', 'pwd'])
             req.GET(None)
 
-        with patch('despymisc.http_requests.urllib2.urlopen', side_effect=Exception("Bad call")) as ptch:
+        with patch('despymisc.http_requests.request.urlopen', side_effect=Exception("Bad call")) as ptch:
             req = hrq.Request([])
             req.GET(url, {'item1':2, 'item2':'val2'})
             self.assertTrue(req.error_status[0])
             self.assertTrue('Bad call' in req.error_status[1])
 
-        with patch('despymisc.http_requests.urllib2.urlopen', return_value='rval') as ptch:
+        with patch('despymisc.http_requests.request.urlopen', return_value='rval') as ptch:
             req = hrq.Request(['uname', 'pwd'])
             req.GET(url, {'request':'hello'})
             self.assertFalse(req.error_status[0])
             self.assertEqual(req.response, 'rval')
 
-    @patch('despymisc.http_requests.urllib2.Request')
-    def test_Request_download_file(self, prq):
-        url = 'data.somewhere.net'
+    @patch('despymisc.http_requests.request')
+    def test_Request_download_file2(self, prq):
+        url = 'http://data.somewhere.net'
         text = """
 ;
 ;  initial comments in file
@@ -2555,7 +2560,7 @@ URL     =   data.somewhere.net
         f.close()
 
         output = 'test.output'
-        with patch('despymisc.http_requests.urllib2.urlopen', mock_open(read_data='return data')) as mo:
+        with patch('despymisc.http_requests.request.urlopen', mock_open(read_data=b'return data')) as mo:
             hrq.download_file_des(url, output, 'temp.ini', 'http-arch')
             f = open(output, 'r')
             self.assertTrue('return data' in f.readline())
@@ -2568,7 +2573,7 @@ class TestMiscutils(unittest.TestCase):
             OSError.__init__(self, text)
             self.errno = errno.EEXIST
 
-    class TestObj(object):
+    class TestObj:
         def __init__(self, val):
             self.use_db = val
 
@@ -2626,9 +2631,9 @@ class TestMiscutils(unittest.TestCase):
             self.assertTrue(msg in output)
 
     def test_fwsplit(self):
-        inp = '[1, 3, 5, 7, 9]'
+        inp = '1, 3, 5, 7, 9'
         self.assertEqual(mut.fwsplit(inp), ['1', '3', '5', '7', '9'])
-        inp = '[a|b|c  |d]'
+        inp = 'a|b|c  |d'
         self.assertEqual(mut.fwsplit(inp, '|'), ['a', 'b', 'c', 'd'])
         inp = '3:5'
         self.assertEqual(mut.fwsplit(inp), ['3', '4', '5'])
@@ -2730,7 +2735,7 @@ class TestMiscutils(unittest.TestCase):
             mut.pretty_print_dict(None, out_file='my.out')
         with self.assertRaises(AssertionError):
             mut.pretty_print_dict([])
-        data = {'item1': [1,3,5],
+        data = {'item1': [1, 3, 5],
                 'item2': 'abc',
                 'item3': {'item4': True, 'item5': 7, 'item6': None}}
         with capture_output() as (out, err):
@@ -2752,7 +2757,7 @@ class TestMiscutils(unittest.TestCase):
         extra = {'item1': 5,
                  'item2': 'hello'}
         config = {'item3': True,
-                  'item4': [1,2,3]}
+                  'item4': [1, 2, 3]}
         info = mut.get_config_vals(extra, config, {'item1': 'REQ', 'item5': 'OPT'})
         self.assertEqual(len(info.keys()), 1)
         self.assertTrue(info['item1'] == extra['item1'])
@@ -2831,7 +2836,7 @@ class TestMiscutils(unittest.TestCase):
         t1 = time.time()
         time.sleep(2)
         ret = mut.elapsed_time(t1)
-        secs = float(ret.split()[1].replace('s',''))
+        secs = float(ret.split()[1].replace('s', ''))
         self.assertGreaterEqual(secs, 2.0)
         self.assertAlmostEqual(secs, 2.0, delta=0.05)
         with capture_output() as (out, err):
