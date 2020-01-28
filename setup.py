@@ -2,12 +2,12 @@ import distutils
 from distutils.core import setup
 import glob
 
-bin_files = glob.glob("bin/*.py") 
+bin_files = glob.glob("bin/*.py")
 #bin_files = bin_files + glob.glob("bin/*.txt")
 
 # The main call
 setup(name='despymisc',
-      version ='0.2.3',
+      version ='3.0.0',
       license = "GPL",
       description = "A set of handy Python-only simple utility functions for DESDM",
       author = "NCSA",
