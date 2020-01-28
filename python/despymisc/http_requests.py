@@ -13,8 +13,8 @@ USAGE:
 '''
 
 import os
-import urllib
-import urllib2
+import urllib.parse as parse
+import urllib.request as request
 from base64 import b64encode
 
 def get_credentials(desfile=os.path.join(os.environ['HOME'], '.desservices.ini'),
@@ -35,9 +35,9 @@ def get_credentials(desfile=os.path.join(os.environ['HOME'], '.desservices.ini')
         username = None
         password = None
         url = None
-        warning = """WARNING: could not load credentials from .desservices.ini file for section %s
-        please make sure sections make sense""" % section
-        print warning
+        warning = f"""WARNING: could not load credentials from .desservices.ini file for section {section}
+        please make sure sections make sense"""
+        print(warning)
 
     return username, password, url
 
@@ -51,7 +51,7 @@ def download_file_des(url, filename, desfile=None, section='http-desarchive'):
     req = Request(auth)
     req.download_file(url, filename)
 
-class Request(object):
+class Request:
     """ Requests class for retrieving data
     """
 
@@ -74,16 +74,15 @@ class Request(object):
         self.data = data
         if not url:
             raise ValueError('You need to provide an url kwarg.')
-        else:
-            self.url = url
+        self.url = url
 
-        urllib_req = urllib2.Request(self.url)
+        urllib_req = request.Request(self.url)
         if any(self.auth):
             urllib_req.add_header('Authorization',
-                                  'Basic ' + b64encode(self.auth[0] + ':' + self.auth[1]))
+                                  b'Basic ' + b64encode((self.auth[0] + ':' + self.auth[1]).encode('utf-8')))
         try:
-            self.response = urllib2.urlopen(urllib_req, urllib.urlencode(self.data))
-        except Exception, exc:
+            self.response = request.urlopen(urllib_req, parse.urlencode(self.data))
+        except Exception as exc:
             self.error_status = (True, str(exc))
 
     def get_read(self, url):
@@ -91,17 +90,16 @@ class Request(object):
         """
         if not url:
             raise ValueError('You need to provide an url kwarg.')
-        else:
-            self.url = url
+        self.url = url
 
-        urllib_req = urllib2.Request(self.url)
+        urllib_req = request.Request(self.url)
         if any(self.auth):
             urllib_req.add_header('Authorization',
-                                  'Basic ' + b64encode(self.auth[0] + ':' + self.auth[1]))
+                                  b'Basic ' + b64encode((self.auth[0] + ':' + self.auth[1]).encode('utf-8')))
         try:
-            self.response = urllib2.urlopen(urllib_req)
+            self.response = request.urlopen(urllib_req)
             return self.response.read()
-        except Exception, exc:
+        except Exception as exc:
             self.error_status = (True, str(exc))
 
     def download_file(self, url, filename):
@@ -115,16 +113,15 @@ class Request(object):
         """
         if not url:
             raise ValueError('You need to provide an url kwarg.')
-        else:
-            self.url = url
+        self.url = url
 
         url_params = '?'+'&'.join([str(k) + '=' + str(v) for k, v in
-                                   params.iteritems()])
-        urllib_req = urllib2.Request(self.url+url_params)
+                                   params.items()])
+        urllib_req = request.Request(self.url+url_params)
         if any(self.auth):
             urllib_req.add_header('Authorization',
-                                  'Basic ' + b64encode(self.auth[0] + ':' + self.auth[1]))
+                                  b'Basic ' + b64encode((self.auth[0] + ':' + self.auth[1]).encode('utf-8')))
         try:
-            self.response = urllib2.urlopen(urllib_req)
-        except Exception, exc:
+            self.response = request.urlopen(urllib_req)
+        except Exception as exc:
             self.error_status = (True, str(exc))

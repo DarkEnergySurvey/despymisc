@@ -1,10 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 xmlslurper reads in an xml formatted file and converts it to a python dictionary
 """
 import xml.parsers.expat
 
-class Xmlslurper(object):
+class Xmlslurper:
     """
     Class to read in an xml formatted file and convert the table contents to a python dictionary
 
@@ -112,7 +112,7 @@ class Xmlslurper(object):
                 curtype = data['fieldtypes'][data['col']]
                 curname = data['fieldnames'][data['col']]
 
-                if curarrsize != None and curtype != 'char':
+                if curarrsize is not None and curtype != 'char':
                     # data is for an array field
                     # assumes array cannot be of strings
 
@@ -171,7 +171,7 @@ class Xmlslurper(object):
         p.EndElementHandler = end_element
         p.CharacterDataHandler = char_data
 
-        fl = open(filename, "r")
+        fl = open(filename, "rb")
         p.ParseFile(fl)
         fl.close()
 
@@ -219,5 +219,5 @@ if __name__ == "__main__":  # pragma no coverage
         pp.pprint(Xmlslurper(sys.argv[1], tablelist).gettables())
     else:
         for f in glob.glob('*.xml'):
-            print "f: ", f
+            print("f: ", f)
             pp.pprint(Xmlslurper(f, tablelist).gettables())

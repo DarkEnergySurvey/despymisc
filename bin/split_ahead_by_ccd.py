@@ -27,23 +27,23 @@ def parseArgs():
 def main(args):
     """ run the splitter """
     if args.verbose:
-        print args
+        print(args)
     #
     #  Make sure that required arguments are present and appear OK.
     #
     if args.infile is None:
-        print "Input filename (-i) is required"
-        print "Aborting!"
+        print("Input filename (-i) is required")
+        print("Aborting!")
         return False
 
     if not os.path.isfile(args.infile):
-        print "Missing input file: {:s}".format(args.infile)
-        print "Aborting!"
+        print(f"Missing input file: {args.infile:s}")
+        print("Aborting!")
         return False
 
     if args.outfile is None:
-        print "Output filename (-o) is required"
-        print "Aborting!"
+        print("Output filename (-o) is required")
+        print("Aborting!")
         return False
 
     if args.ccdlist == "All":

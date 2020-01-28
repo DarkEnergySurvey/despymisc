@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # $Id: special_metadata_funcs.py 38203 2015-05-17 14:28:09Z mgower $
 # $Rev:: 38203                            $:  # Revision of last commit.
 # $LastChangedBy:: mgower                 $:  # Author of last commit.
@@ -60,11 +59,11 @@ def create_nite(date_obs):
 def create_field(obj):
     """ create the field from OBJECT """
 
-    m = re.search(" hex (\S+)", obj)
+    m = re.search(r" hex (\S+)", obj)
     if m:
         field = m.group(1)
     else:
-        raise KeyError("Cannot parse OBJECT (%s) for 'field' value")
+        raise KeyError(f"Cannot parse OBJECT ({obj}) for 'field' value")
 
     return field
 
@@ -72,7 +71,7 @@ def create_field(obj):
 def convert_ra_to_deg(ra):
     """ Return RA in degrees """
 
-    xx = map(float, ra.split(':'))
+    xx = list(map(float, ra.split(':')))
     radeg = 15.0 * (xx[0] + xx[1]/60.0 + xx[2]/3600.0)
     return round(radeg, 6)
 
@@ -82,7 +81,7 @@ def convert_dec_to_deg(dec):
 
     lteldec = dec.split(':')
     firstchar = lteldec[0][0]
-    xx = map(float, lteldec)
+    xx = list(map(float, lteldec))
     if firstchar == '-':
         tdecsgn = -1.
     else:
@@ -92,15 +91,15 @@ def convert_dec_to_deg(dec):
 
 ######################################################################
 def fwhm_arcsec(farglist):
-#
-#   This is derived from "calc_pixscale" in runSExtractor.c.  This python version is different
-#   from the original c code in that it checks to see if cd1_1 and cd2_2 are both non-zero, otherwise
-#   it skips the calculation of rho_a and rho_b to avoid ZeroDivisionError.
-#
+    """
+    This is derived from "calc_pixscale" in runSExtractor.c.  This python version is different
+    from the original c code in that it checks to see if cd1_1 and cd2_2 are both non-zero, otherwise
+    it skips the calculation of rho_a and rho_b to avoid ZeroDivisionError.
+    """
     # check number of arguments
     nargs = len(farglist)
     if nargs != 7:
-        raise TypeError("fwhm_arcsec() takes exactly 7 arguments (% given)" % nargs)
+        raise TypeError(f"fwhm_arcsec() takes exactly 7 arguments ({nargs} given)")
 
     # store values in farglist in local variables
     fwhm = float(farglist[0])
@@ -114,7 +113,7 @@ def fwhm_arcsec(farglist):
     flag_pixscale_exist = False
 
     # if the pixscal keywords exist, then take the average
-    if pixscale1 != 0.0 and pixscale1 != 0.0:
+    if pixscale1 != 0.0 and pixscale2 != 0.0:
         pixscale_tem = 0.5 * (pixscale1 + pixscale2)
         flag_pixscale_exist = True
 

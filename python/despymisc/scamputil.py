@@ -59,7 +59,7 @@ def split_ahead_by_ccd(infile, outfile, ccd_list):
     ccd_check = True
     for ccd in ccd_list:
         if ccd not in head_set:
-            print "Warning: CCDNUM=%d is not present in %s " % (ccd, infile)
+            print(f"Warning: CCDNUM={ccd} is not present in {infile} ")
             ccd_check = False
 
     if not ccd_check:
@@ -69,9 +69,8 @@ def split_ahead_by_ccd(infile, outfile, ccd_list):
     # Step through the list of CCDs and write each .ahead:HDU-like piece.    print len(head_set)
     fout = open(outfile, 'w')
     for ccd in ccd_list:
-        if ccd in head_set:
-            tmp_header = head_set[ccd]
-            for hline in tmp_header:
-                fout.write("%s\n" % (hline))
+        tmp_header = head_set[ccd]
+        for hline in tmp_header:
+            fout.write(hline + "\n")
     fout.close()
     return True
